@@ -7,8 +7,8 @@ import { SEO } from "./components/SEO";
 import { cn } from "./lib/utils";
 
 const SECTIONS = [
-  { id: "hero", label: "Intro" },
-  { id: "registration", label: "Register" },
+  { id: "hero", label: "About" },
+  { id: "registration", label: "Volunteer" },
 ];
 
 function Layout({ children }) {
