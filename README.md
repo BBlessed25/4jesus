@@ -1,5 +1,7 @@
 # Eagles Nest — New Church Facility Volunteer Registration
 
+npm package / project folder: **`church_project`**
+
 Single-page volunteer registration site for **Eagles Nest Church** / **Gospel Pillars** — **Eagles Nest New Church Facility Project**.
 
 Visitors can sign up to serve during the build (skills, availability Mon–Sat), and optionally note financial support via the published INTERAC details.
