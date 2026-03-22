@@ -6,6 +6,27 @@
  *
  * Shape matches Apps Script: timestamp, availableDays (string), areaOfVolunteering (label text).
  */
+let sheetsWebAppJsonFetch = null;
+
+/**
+ * 1) VITE_GOOGLE_SHEETS_WEB_APP_URL from .env (local dev / CI when set)
+ * 2) public/sheets-webapp.json { "webAppUrl": "..." } — works on Netlify etc. when .env is not in the repo
+ */
+async function resolveSheetsWebAppUrl() {
+  const envUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL?.trim();
+  if (envUrl) return envUrl;
+
+  if (!sheetsWebAppJsonFetch) {
+    const base = import.meta.env.BASE_URL || "/";
+    sheetsWebAppJsonFetch = fetch(`${base}sheets-webapp.json`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((j) => (typeof j?.webAppUrl === "string" ? j.webAppUrl.trim() : ""))
+      .catch(() => "");
+  }
+  const fromPublic = await sheetsWebAppJsonFetch;
+  return fromPublic || "";
+}
+
 export function sheetRowPayloadFromForm(formPayload) {
   const days = Array.isArray(formPayload.availableDayLabels)
     ? formPayload.availableDayLabels.join(", ")
@@ -24,12 +45,12 @@ export function sheetRowPayloadFromForm(formPayload) {
   };
 }
 
-export function submitRegistrationToGoogleSheet(formPayload) {
-  const url = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL?.trim();
+export async function submitRegistrationToGoogleSheet(formPayload) {
+  const url = await resolveSheetsWebAppUrl();
   if (!url) {
     const err = new Error("MISSING_WEB_APP_URL");
     err.code = "MISSING_WEB_APP_URL";
-    return Promise.reject(err);
+    throw err;
   }
 
   const payload = sheetRowPayloadFromForm(formPayload);
