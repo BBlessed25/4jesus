@@ -1,74 +1,93 @@
 /**
- * Option A (recommended): Open your target Google Sheet → Extensions → Apps Script,
- * paste this file, save, then deploy as a Web app.
+ * Deploy as Web app: Execute as Me, Who has access: Anyone.
+ * After edits: Manage deployments → Edit → New version → Deploy.
  *
- * Option B: Standalone project — replace getActiveSpreadsheet() with:
- *   SpreadsheetApp.openById('YOUR_SPREADSHEET_ID_FROM_URL');
- *
- * Deploy → New deployment → Type: Web app
- *   Execute as: Me
- *   Who has access: Anyone
- * Copy the Web app URL into .env as VITE_GOOGLE_SHEETS_WEB_APP_URL=...
- *
- * After changing the script, use Deploy → Manage deployments → Edit (pencil) → Version: New version.
+ * Browser form posts urlencoded field "payload" (JSON string).
+ * Server / Netlify can POST application/json with the same object shape.
+ */
+var SPREADSHEET_ID = "11AVAaPvCdvIB_yj5ol0a4BxTHNS7IHoUBS-RDBR4Dz8";
+var SHEET_NAME = "church_project";
+var MAX_REGISTRATIONS = 500;
+
+function doGet() {
+  return ContentService.createTextOutput(
+    "Volunteer registration web app is running. Submissions use POST from your site."
+  ).setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * @param {GoogleAppsScript.Events.DoPost} e
+ * @returns {GoogleAppsScript.Content.TextOutput}
  */
 function doPost(e) {
   try {
-    var raw = (e.parameter && e.parameter.payload) || "";
-    if (!raw && e.postData && e.postData.contents) {
-      raw = e.postData.contents;
-      var type = (e.postData.type || "").toLowerCase();
-      if (type.indexOf("application/x-www-form-urlencoded") !== -1) {
-        var m = raw.match(/(?:^|&)payload=([^&]*)/);
-        if (m) {
-          raw = decodeURIComponent(m[1].replace(/\+/g, " "));
-        }
-      }
-    }
-    if (!raw) {
-      return jsonOut({ ok: false, error: "missing payload" });
-    }
-    var d = JSON.parse(raw);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("Registrations");
+    var body = getBody_(e);
+
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) {
-      sheet = ss.insertSheet("Registrations");
+      sheet = ss.insertSheet(SHEET_NAME);
     }
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "Submitted (UTC)",
-        "Full name",
-        "Phone",
-        "Gender",
-        "Area",
-        "Other area",
-        "Available days",
-        "Availability notes",
-        "Support amount",
-        "Remittance date",
-      ]);
+
+    // Assume row 1 is a header; cap data rows at MAX_REGISTRATIONS
+    if (sheet.getLastRow() >= MAX_REGISTRATIONS + 1) {
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          ok: false,
+          error:
+            "Registration is full. We have reached the maximum of " +
+            MAX_REGISTRATIONS +
+            " registrations.",
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
     }
-    var days = Array.isArray(d.availableDayLabels) ? d.availableDayLabels.join(", ") : "";
+
     sheet.appendRow([
-      d.submittedAt || new Date().toISOString(),
-      d.fullName || "",
-      d.phone || "",
-      d.gender || "",
-      d.areaLabel || d.areaOfVolunteering || "",
-      d.otherVolunteerArea || "",
-      days,
-      d.availabilityNotes || "",
-      d.supportAmount || "",
-      d.remittanceDate || "",
+      body.timestamp || new Date(),
+      body.fullName || "",
+      body.phone || "",
+      body.gender || "",
+      body.areaOfVolunteering || "",
+      body.otherVolunteerArea || "",
+      body.availableDays || "",
+      body.availabilityNotes || "",
+      body.supportAmount || "",
+      body.remittanceDate || "",
     ]);
-    return jsonOut({ ok: true });
+
+    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(
+      ContentService.MimeType.JSON
+    );
   } catch (err) {
-    return jsonOut({ ok: false, error: String(err) });
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: false, error: String(err) })
+    ).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-function jsonOut(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(
-    ContentService.MimeType.JSON
-  );
+/**
+ * @param {GoogleAppsScript.Events.DoPost} e
+ * @returns {Object}
+ */
+function getBody_(e) {
+  if (e.parameter && e.parameter.payload) {
+    return JSON.parse(e.parameter.payload);
+  }
+  if (!e.postData || !e.postData.contents) {
+    throw new Error("missing post body");
+  }
+  var type = (e.postData.type || "").toLowerCase();
+  if (type.indexOf("application/json") !== -1) {
+    return JSON.parse(e.postData.contents);
+  }
+  if (type.indexOf("application/x-www-form-urlencoded") !== -1) {
+    var raw = e.postData.contents;
+    var m = raw.match(/(?:^|&)payload=([^&]*)/);
+    if (!m) {
+      throw new Error("expected form field payload=");
+    }
+    var decoded = decodeURIComponent(m[1].replace(/\+/g, " "));
+    return JSON.parse(decoded);
+  }
+  return JSON.parse(e.postData.contents);
 }

@@ -3,14 +3,36 @@
  *
  * fetch(..., { mode: "no-cors" }) always appears to "succeed" (opaque response); you cannot
  * tell if doPost ran or failed. A real form POST is what Google’s examples use for web apps.
+ *
+ * Shape matches Apps Script: timestamp, availableDays (string), areaOfVolunteering (label text).
  */
-export function submitRegistrationToGoogleSheet(payload) {
+export function sheetRowPayloadFromForm(formPayload) {
+  const days = Array.isArray(formPayload.availableDayLabels)
+    ? formPayload.availableDayLabels.join(", ")
+    : "";
+  return {
+    timestamp: formPayload.submittedAt || new Date().toISOString(),
+    fullName: formPayload.fullName,
+    phone: formPayload.phone,
+    gender: formPayload.gender,
+    areaOfVolunteering: formPayload.areaLabel || formPayload.areaOfVolunteering || "",
+    otherVolunteerArea: formPayload.otherVolunteerArea || "",
+    availableDays: days,
+    availabilityNotes: formPayload.availabilityNotes || "",
+    supportAmount: formPayload.supportAmount || "",
+    remittanceDate: formPayload.remittanceDate || "",
+  };
+}
+
+export function submitRegistrationToGoogleSheet(formPayload) {
   const url = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL?.trim();
   if (!url) {
     const err = new Error("MISSING_WEB_APP_URL");
     err.code = "MISSING_WEB_APP_URL";
     return Promise.reject(err);
   }
+
+  const payload = sheetRowPayloadFromForm(formPayload);
 
   return new Promise((resolve, reject) => {
     const iframeName = `gsheet_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;

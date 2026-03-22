@@ -133,7 +133,7 @@ export function RegistrationPage() {
     } catch (err) {
       if (err?.code === "MISSING_WEB_APP_URL") {
         toast.error(
-          "Registration could not be saved: set VITE_GOOGLE_SHEETS_WEB_APP_URL in .env and restart the dev server."
+          "Registration is not connected: add your Apps Script web app URL to .env as VITE_GOOGLE_SHEETS_WEB_APP_URL (see .env.example), then restart npm run dev."
         );
       } else if (err?.message === "TIMEOUT") {
         toast.error(
