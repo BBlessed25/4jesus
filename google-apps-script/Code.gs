@@ -51,8 +51,7 @@ function doPost(e) {
       body.otherVolunteerArea || "",
       body.availableDays || "",
       body.availabilityNotes || "",
-      body.supportAmount || "",
-      body.remittanceDate || "",
+      body.volunteerHours || "",
     ]);
 
     return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(

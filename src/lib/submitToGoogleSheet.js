@@ -34,8 +34,7 @@ export function sheetRowPayloadFromForm(formPayload) {
     otherVolunteerArea: formPayload.otherVolunteerArea || "",
     availableDays: days,
     availabilityNotes: formPayload.availabilityNotes || "",
-    supportAmount: formPayload.supportAmount || "",
-    remittanceDate: formPayload.remittanceDate || "",
+    volunteerHours: formPayload.volunteerHours || "",
   };
 }
 

@@ -1,9 +1,9 @@
 import { Helmet } from "react-helmet-async";
 
 const defaultTitle =
-  "Eagles Nest New Church Facility Project — Volunteer Registration | Gospel Pillars";
+  "Eagles Nest New Facility Project — Volunteer Registration | Gospel Pillars";
 const defaultDescription =
-  "Volunteer for the Eagles Nest New Church Facility Project (23 March – 4 April). Register your skills, availability, and optional financial support via INTERAC e-Transfer.";
+  "Volunteer for the Eagles Nest New Facility Project (23 March – 4 April). Register your skills, availability, and how many hours you can serve.";
 
 export function SEO({
   title = defaultTitle,

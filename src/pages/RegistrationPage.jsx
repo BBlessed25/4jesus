@@ -22,17 +22,23 @@ const VOLUNTEER_AREAS = [
   { value: "others", label: "Others" },
 ];
 
-const WEEKDAYS = [
-  { key: "mon", label: "Monday" },
-  { key: "tue", label: "Tuesday" },
-  { key: "wed", label: "Wednesday" },
-  { key: "thu", label: "Thursday" },
-  { key: "fri", label: "Friday" },
-  { key: "sat", label: "Saturday" },
+const PROJECT_DATES = [
+  { key: "mar23", label: "Monday 23rd March" },
+  { key: "mar24", label: "Tuesday 24th March" },
+  { key: "mar25", label: "Wednesday 25th March" },
+  { key: "mar26", label: "Thursday 26th March" },
+  { key: "mar27", label: "Friday 27th March" },
+  { key: "mar28", label: "Saturday 28th March" },
+  { key: "mar30", label: "Monday 30th March" },
+  { key: "mar31", label: "Tuesday 31st March" },
+  { key: "apr1", label: "Wednesday 1st April" },
+  { key: "apr2", label: "Thursday 2nd April" },
+  { key: "apr3", label: "Friday 3rd April" },
+  { key: "apr4", label: "Saturday 4th April" },
 ];
 
 const initialDays = () =>
-  WEEKDAYS.reduce((acc, { key }) => ({ ...acc, [key]: false }), {});
+  PROJECT_DATES.reduce((acc, { key }) => ({ ...acc, [key]: false }), {});
 
 const initialForm = {
   fullName: "",
@@ -42,8 +48,7 @@ const initialForm = {
   otherVolunteerArea: "",
   availableDays: initialDays(),
   availabilityNotes: "",
-  supportAmount: "",
-  remittanceDate: "",
+  volunteerHours: "",
 };
 
 function SectionRule() {
@@ -101,15 +106,21 @@ export function RegistrationPage() {
     }
     if (selectedDaysCount === 0 && !form.availabilityNotes.trim()) {
       toast.error(
-        "Please select at least one available day (Monday–Saturday) or describe your availability in the text box."
+        "Please select at least one project date or describe your availability in the text box."
       );
+      return;
+    }
+    if (!form.volunteerHours.trim()) {
+      toast.error("Please specify how many hours you want to spend volunteering.");
       return;
     }
 
     const areaLabel =
       VOLUNTEER_AREAS.find((a) => a.value === form.areaOfVolunteering)?.label ??
       form.areaOfVolunteering;
-    const availableDayLabels = WEEKDAYS.filter((w) => form.availableDays[w.key]).map((w) => w.label);
+    const availableDayLabels = PROJECT_DATES.filter((d) => form.availableDays[d.key]).map(
+      (d) => d.label
+    );
 
     const payload = {
       fullName: form.fullName.trim(),
@@ -120,8 +131,7 @@ export function RegistrationPage() {
       otherVolunteerArea: form.otherVolunteerArea.trim(),
       availableDayLabels,
       availabilityNotes: form.availabilityNotes.trim(),
-      supportAmount: form.supportAmount.trim(),
-      remittanceDate: form.remittanceDate.trim(),
+      volunteerHours: form.volunteerHours.trim(),
       submittedAt: new Date().toISOString(),
     };
 
@@ -175,11 +185,11 @@ export function RegistrationPage() {
             >
               <img
                 src="/logo2.jpeg"
-                alt="Eagles Nest Church — Gospel Pillars"
+                alt="Eagles Nest New Facility Project — Gospel Pillars"
                 className="mx-auto h-20 sm:h-24 w-auto object-contain rounded-lg mb-5"
               />
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-black leading-tight mb-1">
-                Eagles Nest New Church Facility Project
+                Eagles Nest New Facility Project
               </h1>
               <p className="text-lg sm:text-xl font-semibold text-amber-900 mb-4">
                 Volunteer Registration Form
@@ -337,14 +347,13 @@ export function RegistrationPage() {
 
                   <div>
                     <span className="block text-sm font-medium text-black mb-1">
-                      Available Days (Monday – Saturday) <span className="text-black">*</span>
+                      Available project dates <span className="text-black">*</span>
                     </span>
                     <p className="text-xs text-black/75 mb-3">
-                      Please specify availability — you can choose multiple days. Or describe your
-                      availability in the text box below.
+                      Select all dates you can help. You can also add details in the notes box below.
                     </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {WEEKDAYS.map(({ key, label }) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {PROJECT_DATES.map(({ key, label }) => (
                         <label
                           key={key}
                           className={cn(
@@ -365,7 +374,7 @@ export function RegistrationPage() {
                       ))}
                     </div>
                     <label htmlFor="availabilityNotes" className="block text-sm font-medium text-black mt-4 mb-1">
-                      Availability notes (optional if days are selected above)
+                      Availability notes (optional if dates are selected above)
                     </label>
                     <textarea
                       id="availabilityNotes"
@@ -377,64 +386,27 @@ export function RegistrationPage() {
                         "bg-white text-black placeholder:text-neutral-500",
                         "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                       )}
-                      placeholder="e.g. Mornings only, or specific dates within the project window"
+                      placeholder="e.g. Mornings only, or partial hours on selected dates"
                     />
                   </div>
 
-                  <SectionRule />
-
-                  <div className="rounded-xl bg-amber-100/85 border border-amber-200/70 p-4 space-y-3">
-                    <h3 className="text-base font-semibold text-black">Financial Support / Offering</h3>
-                    <p className="text-sm text-black/85 leading-relaxed">
-                      If you would like to support this project financially, kindly use the project
-                      account details provided below:
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium text-black">INTERAC e-Transfer: </span>
-                      <a
-                        href="mailto:Gospelpillarsontario@gmail.com"
-                        className="text-amber-900 underline underline-offset-2 break-all"
-                      >
-                        Gospelpillarsontario@gmail.com
-                      </a>
-                    </p>
-                    <div>
-                      <label htmlFor="supportAmount" className="block text-sm font-medium text-black mb-1">
-                        Support Amount
-                      </label>
-                      <input
-                        id="supportAmount"
-                        type="text"
-                        inputMode="decimal"
-                        value={form.supportAmount}
-                        onChange={(e) => update("supportAmount", e.target.value)}
-                        className={cn(
-                          "mt-1 block w-full rounded-lg border border-amber-300/80",
-                          "bg-white text-black placeholder:text-neutral-500",
-                          "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                        )}
-                        placeholder="Optional — e.g. $100"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="remittanceDate" className="block text-sm font-medium text-black mb-1">
-                        Date of remission
-                      </label>
-                      <input
-                        id="remittanceDate"
-                        type="date"
-                        value={form.remittanceDate}
-                        onChange={(e) => update("remittanceDate", e.target.value)}
-                        className={cn(
-                          "mt-1 block w-full rounded-lg border border-amber-300/80",
-                          "bg-white text-black",
-                          "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                        )}
-                      />
-                    </div>
-                    <p className="text-xs text-black/75 pt-1">
-                      All contributions will go directly toward the successful completion of the facility.
-                    </p>
+                  <div>
+                    <label htmlFor="volunteerHours" className="block text-sm font-medium text-black mb-1">
+                      Number of hours you want to spend <span className="text-black">*</span>
+                    </label>
+                    <input
+                      id="volunteerHours"
+                      type="text"
+                      inputMode="decimal"
+                      value={form.volunteerHours}
+                      onChange={(e) => update("volunteerHours", e.target.value)}
+                      className={cn(
+                        "mt-1 block w-full rounded-lg border border-amber-300/80",
+                        "bg-white text-black placeholder:text-neutral-500",
+                        "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                      )}
+                      placeholder="e.g. 8 or 8–12 total"
+                    />
                   </div>
 
                   <div className="pt-2">
@@ -458,8 +430,7 @@ export function RegistrationPage() {
           <footer className="text-center text-white text-sm sm:text-base space-y-4 drop-shadow-md px-2 no-print">
             <p className="leading-relaxed max-w-xl mx-auto">
               Thank you for your willingness to serve and be part of what God is doing through this
-              project. Your contribution, whether in service or giving, is highly valued and
-              appreciated.
+              project. Your time and service are highly valued and appreciated.
             </p>
             <blockquote className="italic text-white/95 max-w-lg mx-auto border-l-4 border-amber-400/80 pl-4 text-left">
               &ldquo;Each of you should use whatever gift you have received to serve others.&rdquo; – 1
@@ -468,12 +439,8 @@ export function RegistrationPage() {
             <p className="text-white/90">
               For inquiries or further information, please contact the project coordination team.
             </p>
-            <div className="pt-2 border-t border-white/25 max-w-md mx-auto">
-              <p className="font-semibold text-white">Eagles Nest Church</p>
-              <p className="text-white/90 text-sm mt-1">Building Together, Growing in Faith</p>
-            </div>
             <p className="text-white/80 text-xs sm:text-sm pt-2">
-              © Gospel Pillars 2026
+              © Gospel Pillars Toronto 2026
             </p>
           </footer>
         </div>

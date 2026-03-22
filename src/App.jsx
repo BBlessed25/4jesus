@@ -61,7 +61,7 @@ function Layout({ children }) {
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
           <img
             src="/logo2.jpeg"
-            alt="Gospel Pillars Canada"
+            alt="Eagles Nest New Facility Project"
             className="h-10 w-auto object-contain rounded"
           />
           <div className="flex gap-1 sm:gap-2">
