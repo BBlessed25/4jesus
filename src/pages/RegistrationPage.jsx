@@ -139,6 +139,8 @@ export function RegistrationPage() {
         toast.error(
           "No response from the registration link. Check your web app URL, deployment (new version), and Apps Script Executions."
         );
+      } else if (err?.code === "REGISTRATION_FAILED" || err?.code === "BAD_RESPONSE") {
+        toast.error(err.message);
       } else {
         toast.error("Could not reach the registration server. Check your connection and try again.");
       }

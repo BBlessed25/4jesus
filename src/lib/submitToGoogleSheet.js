@@ -1,17 +1,11 @@
 /**
- * POSTs registration JSON to a Google Apps Script web app via a hidden form + iframe.
+ * Netlify: build sets VITE_REGISTRATION_API=/api/register → POST JSON via serverless
+ * function (reliable; matches Apps Script application/json).
  *
- * fetch(..., { mode: "no-cors" }) always appears to "succeed" (opaque response); you cannot
- * tell if doPost ran or failed. A real form POST is what Google’s examples use for web apps.
- *
- * Shape matches Apps Script: timestamp, availableDays (string), areaOfVolunteering (label text).
+ * Local dev: no VITE_REGISTRATION_API → hidden form POST to Apps Script web app URL.
  */
 let sheetsWebAppJsonFetch = null;
 
-/**
- * 1) VITE_GOOGLE_SHEETS_WEB_APP_URL from .env (local dev / CI when set)
- * 2) public/sheets-webapp.json { "webAppUrl": "..." } — works on Netlify etc. when .env is not in the repo
- */
 async function resolveSheetsWebAppUrl() {
   const envUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL?.trim();
   if (envUrl) return envUrl;
@@ -45,16 +39,40 @@ export function sheetRowPayloadFromForm(formPayload) {
   };
 }
 
-export async function submitRegistrationToGoogleSheet(formPayload) {
-  const url = await resolveSheetsWebAppUrl();
-  if (!url) {
-    const err = new Error("MISSING_WEB_APP_URL");
-    err.code = "MISSING_WEB_APP_URL";
+async function submitViaNetlifyFunction(payload) {
+  const path = import.meta.env.VITE_REGISTRATION_API?.trim();
+  if (!path) return false;
+
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    const err = new Error("Registration service returned an invalid response.");
+    err.code = "BAD_RESPONSE";
     throw err;
   }
 
-  const payload = sheetRowPayloadFromForm(formPayload);
+  if (!res.ok || data.ok === false) {
+    const err = new Error(
+      typeof data.error === "string" && data.error
+        ? data.error
+        : "Registration could not be saved. Try again or contact the team."
+    );
+    err.code = "REGISTRATION_FAILED";
+    throw err;
+  }
 
+  return true;
+}
+
+function submitViaIframeForm(url, payload) {
   return new Promise((resolve, reject) => {
     const iframeName = `gsheet_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const iframe = document.createElement("iframe");
@@ -85,7 +103,6 @@ export async function submitRegistrationToGoogleSheet(formPayload) {
     };
 
     iframe.onload = () => {
-      // Only count loads after submit(); avoids about:blank before the form posts.
       if (!submitted) return;
       cleanup();
       resolve();
@@ -103,4 +120,20 @@ export async function submitRegistrationToGoogleSheet(formPayload) {
     submitted = true;
     form.submit();
   });
+}
+
+export async function submitRegistrationToGoogleSheet(formPayload) {
+  const payload = sheetRowPayloadFromForm(formPayload);
+
+  const usedProxy = await submitViaNetlifyFunction(payload);
+  if (usedProxy) return;
+
+  const url = await resolveSheetsWebAppUrl();
+  if (!url) {
+    const err = new Error("MISSING_WEB_APP_URL");
+    err.code = "MISSING_WEB_APP_URL";
+    throw err;
+  }
+
+  await submitViaIframeForm(url, payload);
 }
