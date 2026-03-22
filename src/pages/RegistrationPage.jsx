@@ -3,6 +3,7 @@ import { useInView } from "react-intersection-observer";
 import { Card, CardHeader, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { cn } from "../lib/utils";
+import { submitRegistrationToGoogleSheet } from "../lib/submitToGoogleSheet";
 import toast from "react-hot-toast";
 
 const VOLUNTEER_AREAS = [
@@ -57,6 +58,7 @@ function SectionRule() {
 
 export function RegistrationPage() {
   const [form, setForm] = useState(initialForm);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [heroRef, heroInView] = useInView({ threshold: 0.2, triggerOnce: true });
   const [formRef, formInView] = useInView({ threshold: 0.1, triggerOnce: true });
 
@@ -74,7 +76,7 @@ export function RegistrationPage() {
   const selectedDaysCount = Object.values(form.availableDays).filter(Boolean).length;
   const showOthersField = form.areaOfVolunteering === "others";
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.fullName.trim()) {
@@ -104,9 +106,45 @@ export function RegistrationPage() {
       return;
     }
 
-    // In production: POST to your API
-    toast.success("Thank you! Your volunteer registration has been submitted.");
-    setForm(initialForm);
+    const areaLabel =
+      VOLUNTEER_AREAS.find((a) => a.value === form.areaOfVolunteering)?.label ??
+      form.areaOfVolunteering;
+    const availableDayLabels = WEEKDAYS.filter((w) => form.availableDays[w.key]).map((w) => w.label);
+
+    const payload = {
+      fullName: form.fullName.trim(),
+      phone: form.phone.trim(),
+      gender: form.gender,
+      areaOfVolunteering: form.areaOfVolunteering,
+      areaLabel,
+      otherVolunteerArea: form.otherVolunteerArea.trim(),
+      availableDayLabels,
+      availabilityNotes: form.availabilityNotes.trim(),
+      supportAmount: form.supportAmount.trim(),
+      remittanceDate: form.remittanceDate.trim(),
+      submittedAt: new Date().toISOString(),
+    };
+
+    setIsSubmitting(true);
+    try {
+      await submitRegistrationToGoogleSheet(payload);
+      toast.success("Thank you! Your registration was sent.");
+      setForm(initialForm);
+    } catch (err) {
+      if (err?.code === "MISSING_WEB_APP_URL") {
+        toast.error(
+          "Registration could not be saved: set VITE_GOOGLE_SHEETS_WEB_APP_URL in .env and restart the dev server."
+        );
+      } else if (err?.message === "TIMEOUT") {
+        toast.error(
+          "No response from the registration link. Check your web app URL, deployment (new version), and Apps Script Executions."
+        );
+      } else {
+        toast.error("Could not reach the registration server. Check your connection and try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -398,8 +436,13 @@ export function RegistrationPage() {
                   </div>
 
                   <div className="pt-2">
-                    <Button type="submit" size="sm" className="w-full sm:w-auto">
-                      Submit registration
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Submitting…" : "Submit registration"}
                     </Button>
                   </div>
                 </form>
