@@ -1,11 +1,10 @@
 /**
  * Forwards JSON POST body to Google Apps Script (application/json → doPost).
  *
- * Netlify → Site settings → Environment variables (any one of):
- *   GOOGLE_SHEETS_WEB_APP_URL
- *   VITE_GOOGLE_SHEETS_WEB_APP_URL
- *   APPS_SCRIPT_WEB_APP_URL
- *   WEB_APP_URL
+ * URL resolution (first match wins):
+ * 1) GOOGLE_SHEETS_WEB_APP_URL, VITE_GOOGLE_SHEETS_WEB_APP_URL, APPS_SCRIPT_WEB_APP_URL, WEB_APP_URL
+ *    → In Netlify, enable these for "Functions" / runtime (not only "Builds"), then redeploy.
+ * 2) Fetch this deploy's /sheets-webapp.json (same file as in public/) using Netlify's URL env.
  */
 
 const CORS = {
@@ -14,7 +13,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function resolveScriptUrl() {
+function scriptUrlFromEnv() {
   const v =
     process.env.GOOGLE_SHEETS_WEB_APP_URL ||
     process.env.VITE_GOOGLE_SHEETS_WEB_APP_URL ||
@@ -22,6 +21,35 @@ function resolveScriptUrl() {
     process.env.WEB_APP_URL ||
     "";
   return String(v).trim();
+}
+
+async function scriptUrlFromDeployedJson() {
+  const bases = [
+    process.env.URL,
+    process.env.DEPLOY_PRIME_URL,
+    process.env.DEPLOY_URL,
+  ]
+    .filter(Boolean)
+    .map((b) => String(b).replace(/\/$/, ""));
+
+  for (const root of bases) {
+    try {
+      const r = await fetch(`${root}/sheets-webapp.json`, { redirect: "follow" });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const u = typeof j.webAppUrl === "string" ? j.webAppUrl.trim() : "";
+      if (u) return u;
+    } catch {
+      /* try next base */
+    }
+  }
+  return "";
+}
+
+async function resolveScriptUrl() {
+  const fromEnv = scriptUrlFromEnv();
+  if (fromEnv) return fromEnv;
+  return scriptUrlFromDeployedJson();
 }
 
 export const handler = async (event) => {
@@ -37,7 +65,7 @@ export const handler = async (event) => {
     };
   }
 
-  const scriptUrl = resolveScriptUrl();
+  const scriptUrl = await resolveScriptUrl();
   if (!scriptUrl) {
     return {
       statusCode: 500,
@@ -45,7 +73,7 @@ export const handler = async (event) => {
       body: JSON.stringify({
         ok: false,
         error:
-          "Missing Apps Script URL on server. Set GOOGLE_SHEETS_WEB_APP_URL (or VITE_GOOGLE_SHEETS_WEB_APP_URL) in Netlify environment variables.",
+          "Missing Apps Script URL. In Netlify → Environment variables, add GOOGLE_SHEETS_WEB_APP_URL (same /exec URL) and enable it for Functions (not Builds only), then redeploy. Or keep public/sheets-webapp.json with \"webAppUrl\" set.",
       }),
     };
   }
