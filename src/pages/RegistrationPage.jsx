@@ -50,7 +50,7 @@ export function RegistrationPage() {
             <div className="mx-auto max-w-2xl space-y-4 text-left text-sm leading-relaxed text-text sm:text-base">
               <p>
                 We are thrilled to support our community by providing free winter jackets for
-                adults.
+                <strong className="ml-1">ADULTS ONLY</strong>.
               </p>
               <p className="font-bold">Register to receive yours by completing the form below.</p>
               <div>

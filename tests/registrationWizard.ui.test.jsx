@@ -58,7 +58,14 @@ describe("RegistrationWizard", () => {
 
     await user.click(screen.getByRole("radio", { name: "Member" }));
 
+    expect(
+      await screen.findByRole("heading", { name: "Registration could not be completed" })
+    ).toBeInTheDocument();
     expect(await screen.findByText(MEMBER_CONFIRMATION)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Registration complete" })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/WWS-2026-MEMBER1/)).not.toBeInTheDocument();
     expect(api.recordMemberResponse).toHaveBeenCalledWith(
       expect.objectContaining({ registrationType: "Member" })
     );

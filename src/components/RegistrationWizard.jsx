@@ -99,7 +99,7 @@ function ChoiceList({ field, value, options, onChange, inventory = null, disable
   );
 }
 
-function ConfirmationCard({ message, registrationId }) {
+function ConfirmationCard({ title = "Registration complete", message, registrationId = "" }) {
   return (
     <Card className="winter-card wizard-card overflow-hidden">
       <CardContent className="px-6 py-10 text-center sm:px-10 sm:py-14">
@@ -109,7 +109,7 @@ function ConfirmationCard({ message, registrationId }) {
         >
           ✓
         </div>
-        <h2 className="text-2xl font-bold text-forest-950 sm:text-3xl">Registration complete</h2>
+        <h2 className="text-2xl font-bold text-forest-950 sm:text-3xl">{title}</h2>
         <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-text/85 sm:text-lg">
           {message}
         </p>
@@ -310,7 +310,9 @@ export function RegistrationWizard() {
   };
 
   if (status === "memberComplete") {
-    return <ConfirmationCard message={MEMBER_CONFIRMATION} registrationId={registrationId} />;
+    return (
+      <ConfirmationCard title="Registration could not be completed" message={MEMBER_CONFIRMATION} />
+    );
   }
   if (status === "visitorComplete") {
     return <ConfirmationCard message={VISITOR_CONFIRMATION} registrationId={registrationId} />;

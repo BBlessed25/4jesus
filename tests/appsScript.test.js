@@ -257,7 +257,7 @@ test("Apps Script appends one visitor row, rejects its replay, and preserves inv
   assert.equal(member.ok, true);
   assert.equal(
     member.message,
-    "Thank you for registering. Please reach out to your local pastor for additional information."
+    "Registration could not be completed. Please reach out to your Area coordinator or local pastor for more information."
   );
   assert.equal(sheets.get("Registrations").rows.length, 3);
   assert.equal(post("availability", {}).sizes.find((item) => item.size === "Small").remaining, 45);

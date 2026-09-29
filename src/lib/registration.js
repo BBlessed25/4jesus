@@ -13,7 +13,7 @@ export const VISITOR_FIELDS = Object.freeze([
 ]);
 
 export const MEMBER_CONFIRMATION =
-  "Thank you for registering. Please reach out to your local pastor for additional information.";
+  "Please reach out to your Area coordinator or local pastor for more information.";
 
 export const VISITOR_CONFIRMATION =
   "Thank you for registering. Your details have been saved. See you at the event.";

@@ -41,7 +41,7 @@ var CLOSED_MESSAGE = "Registration is now closed.";
 var VISITOR_SUCCESS_MESSAGE =
   "Thank you for registering. Your details have been saved. See you at the event.";
 var MEMBER_SUCCESS_MESSAGE =
-  "Thank you for registering. Please reach out to your local pastor for additional information.";
+  "Registration could not be completed. Please reach out to your Area coordinator or local pastor for more information.";
 
 function doPost(e) {
   try {
