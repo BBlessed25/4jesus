@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "maxNodeModuleJsDepth": 0,
+    "skipLibCheck": true,
+    "strict": false,
+    "useUnknownInCatchVariables": false
+  },
+  "include": ["api/**/*.js", "server/**/*.js", "src/**/*.js", "src/**/*.jsx", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

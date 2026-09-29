@@ -8,7 +8,7 @@ import { cn } from "./lib/utils";
 
 const SECTIONS = [
   { id: "hero", label: "About" },
-  { id: "registration", label: "Volunteer" },
+  { id: "registration", label: "Register" },
 ];
 
 function Layout({ children }) {
@@ -52,16 +52,14 @@ function Layout({ children }) {
       <SEO />
       <nav
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 no-print",
-          scrolled
-            ? "bg-amber-50/98 py-2 shadow-lg border-b border-amber-200/60 backdrop-blur-sm"
-            : "py-4 bg-transparent"
+          "no-print fixed top-0 right-0 left-0 z-50 border-b border-gold-500/45 bg-forest-950/90 text-ivory-50 backdrop-blur-md transition-all duration-300",
+          scrolled ? "py-2 shadow-[var(--shadow-medium)]" : "bg-forest-950/80 py-4"
         )}
       >
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
           <img
             src="/logo2.jpeg"
-            alt="Eagles Nest New Facility Project"
+            alt="Gospel Pillars"
             className="h-10 w-auto object-contain rounded"
           />
           <div className="flex gap-1 sm:gap-2">
@@ -70,15 +68,12 @@ function Layout({ children }) {
                 key={id}
                 type="button"
                 onClick={() => scrollToSection(id)}
+                aria-current={activeSection === id ? "location" : undefined}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                  scrolled
-                    ? activeSection === id
-                      ? "bg-amber-500 text-black"
-                      : "text-black hover:bg-amber-200/80"
-                    : activeSection === id
-                      ? "bg-amber-500/90 text-black"
-                      : "text-white/95 hover:bg-white/15 hover:text-white"
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-300 focus-visible:ring-2 focus-visible:ring-gold-400",
+                  activeSection === id
+                    ? "bg-gold-500 text-forest-950 shadow-sm hover:bg-gold-400 active:bg-gold-600"
+                    : "text-ivory-50 hover:bg-ivory-50/10 hover:text-gold-200"
                 )}
               >
                 {label}

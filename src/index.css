@@ -2,60 +2,57 @@
 @plugin "@tailwindcss/typography";
 @plugin "@tailwindcss/forms";
 
-/* Design system – Gold & light theme */
+/* Winter Welfare design system */
 @theme {
-  /* Primary – gold / amber */
-  --color-primary-50: oklch(0.97 0.03 85);
-  --color-primary-100: oklch(0.94 0.06 85);
-  --color-primary-200: oklch(0.88 0.12 85);
-  --color-primary-300: oklch(0.78 0.14 75);
-  --color-primary-500: oklch(0.72 0.16 75);
-  --color-primary-600: oklch(0.58 0.18 65);
-  --color-primary-700: oklch(0.48 0.16 55);
-  --color-primary-800: oklch(0.38 0.12 50);
-  --color-primary-900: oklch(0.28 0.08 50);
+  --color-forest-950: #071712;
+  --color-forest-900: #0d241d;
+  --color-forest-800: #12352b;
+  --color-forest-700: #1d4a3c;
 
-  /* Neutral */
-  --color-neutral-50: oklch(0.98 0.01 85);
-  --color-neutral-100: oklch(0.96 0.02 85);
-  --color-neutral-200: oklch(0.92 0.02 80);
-  --color-neutral-300: oklch(0.85 0.02 75);
-  --color-neutral-500: oklch(0.55 0.02 70);
-  --color-neutral-700: oklch(0.35 0.02 65);
-  --color-neutral-800: oklch(0.28 0.02 60);
-  --color-neutral-900: oklch(0.2 0.02 55);
+  --color-gold-700: #8d672b;
+  --color-gold-600: #a77a32;
+  --color-gold-500: #b8893f;
+  --color-gold-400: #c9a35b;
+  --color-gold-200: #e2c98f;
+  --color-gold-100: #ede2c5;
+
+  --color-ivory-50: #faf7ef;
+  --color-ivory-100: #f5f0e4;
+  --color-ivory-200: #ede6d7;
+
+  --color-neutral-100: #f0eee8;
+  --color-neutral-200: #ddd9d0;
+  --color-neutral-400: #9a9d98;
+  --color-neutral-500: #69716c;
+  --color-neutral-700: #454e49;
+
+  --color-text: #16231e;
+  --color-muted: #69716c;
+  --color-error: #923f3f;
+  --color-error-background: #f7e8e4;
+  --color-warning-background: #f2e7c6;
+  --color-warning-text: #3b301d;
 
   /* Fonts */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* Base layer – light theme (gold accents) */
+/* Semantic surface tokens */
 :root {
-  --bg-base: oklch(0.99 0.01 85);
-  --text-base: oklch(0.25 0.03 65);
-  --text-muted: oklch(0.45 0.03 70);
-  --border-base: oklch(0.9 0.03 85);
-  --shadow-soft: 0 2px 8px oklch(0.5 0.02 75 / 0.08);
-  --shadow-medium: 0 4px 16px oklch(0.45 0.03 70 / 0.12);
-  --shadow-hard: 0 8px 32px oklch(0.4 0.03 65 / 0.15);
+  --bg-base: var(--color-ivory-50);
+  --text-base: var(--color-text);
+  --text-muted: var(--color-muted);
+  --border-base: var(--color-gold-200);
+  --shadow-soft: 0 2px 10px rgba(7, 23, 18, 0.1);
+  --shadow-medium: 0 10px 28px rgba(7, 23, 18, 0.18);
+  --shadow-hard: 0 24px 60px rgba(4, 18, 14, 0.3);
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-  --glass-bg: oklch(0.99 0.02 85 / 0.92);
-  --glass-border: oklch(0.85 0.06 75 / 0.4);
-}
-
-.dark {
-  --bg-base: var(--color-neutral-900);
-  --text-base: var(--color-neutral-100);
-  --text-muted: var(--color-neutral-300);
-  --border-base: var(--color-neutral-700);
-  --shadow-soft: 0 2px 8px oklch(0 0 0 / 0.3);
-  --shadow-medium: 0 4px 16px oklch(0 0 0 / 0.4);
-  --shadow-hard: 0 8px 32px oklch(0 0 0 / 0.5);
-  --glass-bg: oklch(0.2 0.02 250 / 0.75);
-  --glass-border: oklch(0.4 0.02 250 / 0.3);
+  --glass-bg: rgba(245, 240, 228, 0.97);
+  --glass-border: rgba(184, 137, 63, 0.7);
+  --winter-overlay: rgba(7, 23, 18, 0.35);
 }
 
 /* Typography scaling */
@@ -65,6 +62,12 @@ html {
   background: var(--bg-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--color-forest-950);
 }
 
 @media (max-width: 1024px) {
@@ -80,40 +83,27 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-neutral-100);
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: var(--color-neutral-800);
+  background: var(--color-forest-900);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-neutral-300);
+  background: var(--color-gold-600);
   border-radius: 9999px;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: var(--color-neutral-600);
-}
-
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neutral-500);
+  background: var(--color-gold-400);
 }
 
 /* Selection */
 ::selection {
-  background: var(--color-primary-200);
-  color: var(--color-primary-900);
-}
-
-.dark ::selection {
-  background: var(--color-primary-700);
-  color: var(--color-primary-100);
+  background: var(--color-gold-200);
+  color: var(--color-forest-950);
 }
 
 /* Focus ring for accessibility */
-*:focus-visible {
-  outline: 2px solid var(--color-primary-500);
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--color-gold-400);
   outline-offset: 2px;
 }
 
@@ -149,6 +139,17 @@ html {
   }
 }
 
+@keyframes wizard-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes gradient-x {
   0%,
   100% {
@@ -181,6 +182,10 @@ html {
   animation: scale-in 0.35s ease-out forwards;
 }
 
+.wizard-card {
+  animation: wizard-step-in 0.35s ease-out both;
+}
+
 .animate-gradient-x {
   background-size: 200% 200%;
   animation: gradient-x 4s ease infinite;
@@ -192,10 +197,18 @@ html {
 }
 
 /* Stagger delays for lists */
-.delay-1 { animation-delay: 0.1s; }
-.delay-2 { animation-delay: 0.2s; }
-.delay-3 { animation-delay: 0.3s; }
-.delay-4 { animation-delay: 0.4s; }
+.delay-1 {
+  animation-delay: 0.1s;
+}
+.delay-2 {
+  animation-delay: 0.2s;
+}
+.delay-3 {
+  animation-delay: 0.3s;
+}
+.delay-4 {
+  animation-delay: 0.4s;
+}
 
 /* Glass morphism */
 .glass {
@@ -203,6 +216,38 @@ html {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
+}
+
+.winter-card {
+  color: var(--color-text);
+  background: rgba(245, 240, 228, 0.97);
+  border: 1px solid rgba(184, 137, 63, 0.7);
+  box-shadow: var(--shadow-hard);
+}
+
+.winter-overlay {
+  background-color: var(--winter-overlay);
+}
+
+.winter-background {
+  background-position: center center;
+}
+
+@media (max-width: 640px) {
+  .winter-background {
+    background-position: 48% center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Print */

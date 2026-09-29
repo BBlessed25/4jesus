@@ -1,449 +1,108 @@
-import { useState } from "react";
 import { useInView } from "react-intersection-observer";
-import { Card, CardHeader, CardContent } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
+import { RegistrationWizard } from "../components/RegistrationWizard";
 import { cn } from "../lib/utils";
-import { submitRegistrationToGoogleSheet } from "../lib/submitToGoogleSheet";
-import toast from "react-hot-toast";
-
-const VOLUNTEER_AREAS = [
-  { value: "drywall", label: "Drywall Installation" },
-  { value: "painting", label: "Painting & Finishing" },
-  { value: "electrical", label: "Electrical Works" },
-  { value: "plumbing", label: "Plumbing" },
-  { value: "carpentry", label: "Carpentry / Woodwork" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "interior", label: "Interior Decoration" },
-  { value: "furniture", label: "Furniture Assembly" },
-  { value: "av", label: "Technical Support (Audio/Visual Setup)" },
-  { value: "logistics", label: "Logistics & material handling" },
-  { value: "catering", label: "Catering / Food Support" },
-  { value: "labour", label: "General Labour" },
-  { value: "others", label: "Others" },
-];
-
-const PROJECT_DATES = [
-  { key: "mar23", label: "Monday 23rd March" },
-  { key: "mar24", label: "Tuesday 24th March" },
-  { key: "mar25", label: "Wednesday 25th March" },
-  { key: "mar26", label: "Thursday 26th March" },
-  { key: "mar27", label: "Friday 27th March" },
-  { key: "mar28", label: "Saturday 28th March" },
-  { key: "mar30", label: "Monday 30th March" },
-  { key: "mar31", label: "Tuesday 31st March" },
-  { key: "apr1", label: "Wednesday 1st April" },
-  { key: "apr2", label: "Thursday 2nd April" },
-  { key: "apr3", label: "Friday 3rd April" },
-  { key: "apr4", label: "Saturday 4th April" },
-];
-
-const initialDays = () =>
-  PROJECT_DATES.reduce((acc, { key }) => ({ ...acc, [key]: false }), {});
-
-const initialForm = {
-  fullName: "",
-  phone: "",
-  gender: "",
-  areaOfVolunteering: "",
-  otherVolunteerArea: "",
-  availableDays: initialDays(),
-  availabilityNotes: "",
-  volunteerHours: "",
-};
 
 function SectionRule() {
   return (
     <div className="flex items-center gap-3 my-8" aria-hidden="true">
-      <div className="flex-1 h-px bg-amber-300/70" />
-      <span className="text-amber-600/90 text-lg select-none">⸻</span>
-      <div className="flex-1 h-px bg-amber-300/70" />
+      <div className="h-px flex-1 bg-gold-400/65" />
+      <span className="select-none text-lg text-gold-400/90">⸻</span>
+      <div className="h-px flex-1 bg-gold-400/65" />
     </div>
   );
 }
 
 export function RegistrationPage() {
-  const [form, setForm] = useState(initialForm);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [heroRef, heroInView] = useInView({ threshold: 0.2, triggerOnce: true });
   const [formRef, formInView] = useInView({ threshold: 0.1, triggerOnce: true });
 
-  const update = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const toggleDay = (key) => {
-    setForm((prev) => ({
-      ...prev,
-      availableDays: { ...prev.availableDays, [key]: !prev.availableDays[key] },
-    }));
-  };
-
-  const selectedDaysCount = Object.values(form.availableDays).filter(Boolean).length;
-  const showOthersField = form.areaOfVolunteering === "others";
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!form.fullName.trim()) {
-      toast.error("Please enter your full name.");
-      return;
-    }
-    if (!form.phone.trim()) {
-      toast.error("Please enter your phone number.");
-      return;
-    }
-    if (!form.gender) {
-      toast.error("Please select your gender.");
-      return;
-    }
-    if (!form.areaOfVolunteering) {
-      toast.error("Please select an area of volunteering.");
-      return;
-    }
-    if (showOthersField && !form.otherVolunteerArea.trim()) {
-      toast.error('Please describe your area under "Others".');
-      return;
-    }
-    if (selectedDaysCount === 0 && !form.availabilityNotes.trim()) {
-      toast.error(
-        "Please select at least one project date or describe your availability in the text box."
-      );
-      return;
-    }
-    if (!form.volunteerHours.trim()) {
-      toast.error("Please specify how many hours you want to spend volunteering.");
-      return;
-    }
-
-    const areaLabel =
-      VOLUNTEER_AREAS.find((a) => a.value === form.areaOfVolunteering)?.label ??
-      form.areaOfVolunteering;
-    const availableDayLabels = PROJECT_DATES.filter((d) => form.availableDays[d.key]).map(
-      (d) => d.label
-    );
-
-    const payload = {
-      fullName: form.fullName.trim(),
-      phone: form.phone.trim(),
-      gender: form.gender,
-      areaOfVolunteering: form.areaOfVolunteering,
-      areaLabel,
-      otherVolunteerArea: form.otherVolunteerArea.trim(),
-      availableDayLabels,
-      availabilityNotes: form.availabilityNotes.trim(),
-      volunteerHours: form.volunteerHours.trim(),
-      submittedAt: new Date().toISOString(),
-    };
-
-    setIsSubmitting(true);
-    try {
-      await submitRegistrationToGoogleSheet(payload);
-      toast.success("Thank you! Your registration was sent.");
-      setForm(initialForm);
-    } catch (err) {
-      if (err?.code === "MISSING_WEB_APP_URL") {
-        toast.error(
-          "Registration is not connected: set VITE_GOOGLE_SHEETS_WEB_APP_URL in .env and restart the dev server, or set webAppUrl in public/sheets-webapp.json and redeploy."
-        );
-      } else if (err?.message === "TIMEOUT") {
-        toast.error(
-          "No response from the registration link. Check your web app URL, deployment (new version), and Apps Script Executions."
-        );
-      } else if (err?.code === "REGISTRATION_FAILED" || err?.code === "BAD_RESPONSE") {
-        toast.error(err.message);
-      } else {
-        toast.error("Could not reach the registration server. Check your connection and try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen relative">
-        <div
-          className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
-          style={{ backgroundImage: "url(/bg.png)" }}
-        />
-        <div className="fixed inset-0 bg-black/55 -z-10" />
+      <div
+        className="winter-background fixed inset-0 -z-10 bg-cover bg-no-repeat"
+        style={{ backgroundImage: "url(/bg2.png)" }}
+      />
+      <div className="winter-overlay fixed inset-0 -z-10" />
 
-        <div className="relative z-0 max-w-2xl mx-auto px-4 py-8 sm:py-12 pb-16">
-          {/* HEADER */}
-          <section
-            id="hero"
-            ref={heroRef}
+      <div className="relative z-0 max-w-2xl mx-auto px-4 py-8 sm:py-12 pb-16">
+        <section
+          id="hero"
+          ref={heroRef}
+          className={cn(
+            "text-center mb-6 transition-all duration-500",
+            heroInView && "animate-slide-up"
+          )}
+        >
+          <div
             className={cn(
-              "text-center mb-6 transition-all duration-500",
-              heroInView && "animate-slide-up"
+              "winter-card rounded-2xl p-6 text-left sm:p-8 sm:text-center",
+              heroInView && "animate-scale-in"
             )}
           >
-            <div
-              className={cn(
-                "glass rounded-2xl p-6 sm:p-8 bg-amber-50/95 border border-amber-200/60 text-left sm:text-center",
-                heroInView && "animate-scale-in"
-              )}
-            >
-              <img
-                src="/logo2.jpeg"
-                alt="Eagles Nest New Facility Project — Gospel Pillars"
-                className="mx-auto h-20 sm:h-24 w-auto object-contain rounded-lg mb-5"
-              />
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-black leading-tight mb-1">
-                Eagles Nest New Facility Project
-              </h1>
-              <p className="text-lg sm:text-xl font-semibold text-amber-900 mb-4">
-                Volunteer Registration Form
+            <img
+              src="/onesoundlogo.jpg"
+              alt="One Sound logo"
+              className="mx-auto mb-5 h-20 w-auto rounded-lg border border-gold-500/35 object-contain shadow-sm sm:h-24"
+            />
+            <h1 className="mb-4 text-xl leading-tight font-bold text-forest-950 sm:text-2xl md:text-3xl">
+              Winter Welfare Sunday Registration Form
+            </h1>
+            <div className="mx-auto max-w-2xl space-y-4 text-left text-sm leading-relaxed text-text sm:text-base">
+              <p>
+                We are thrilled to support our community by providing free winter jackets for
+                adults.
               </p>
-              <p className="text-black text-sm sm:text-base leading-relaxed max-w-xl mx-auto mb-6">
-                Join us as we come together to build and prepare our new facility for God&apos;s work.
-                Your time, skills, and service will make a lasting impact. We welcome all willing hands
-                to be part of this great project.
-              </p>
-              <div className="rounded-xl bg-amber-100/90 border border-amber-200/70 px-4 py-3 text-black text-sm sm:text-base">
-                <p className="font-semibold text-amber-950 mb-1">Project Duration:</p>
-                <p className="text-black/90">23rd March – 4th April</p>
+              <p className="font-bold">Register to receive yours by completing the form below.</p>
+              <div>
+                <h2 className="font-bold mb-2">Important Registration Information</h2>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>
+                    Winter jackets will be given only to individuals who are physically present at
+                    the church on the collection day.
+                  </li>
+                  <li>If you have registered previously, please do not register again.</li>
+                  <li>
+                    If you will not be available on the day of the winter jacket collection, please
+                    do not register. This will allow the opportunity to be given to someone who can
+                    attend.
+                  </li>
+                </ul>
               </div>
+              <p>
+                <strong>Venue:</strong> GOSPEL PILLARS CHURCH TORONTO (The Eagle’s Nest)
+                <br />
+                1860 Wilson Ave, Suite 400
+                <br />
+                Toronto, ON M9M 3A7, Canada
+              </p>
+              <p>
+                <strong>Date:</strong> Sunday, October 4, 2026
+              </p>
+              <p>
+                <strong>Time:</strong> 10:00 AM (EST)
+              </p>
+              <p className="italic">Registration closes Friday, October 2, 2026.</p>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <SectionRule />
+        <SectionRule />
 
-          {/* BODY */}
-          <section className="glass rounded-2xl p-6 sm:p-8 bg-amber-50/92 border border-amber-200/60 mb-8 text-black">
-            <p className="text-sm sm:text-base leading-relaxed mb-4">
-              We are inviting volunteers to support various aspects of the Eagles Nest New Facility
-              Project. Whether you have professional experience or simply a willing heart to serve,
-              there is a place for you.
-            </p>
-            <p className="text-sm sm:text-base leading-relaxed">
-              Please fill out the form below with accurate details so we can assign you to the
-              appropriate team.
-            </p>
-          </section>
+        <section
+          id="registration"
+          ref={formRef}
+          aria-label="Winter jacket registration"
+          className={cn("transition-all duration-500", formInView && "animate-slide-up delay-2")}
+        >
+          <RegistrationWizard />
+        </section>
 
-          {/* FORM */}
-          <section
-            id="registration"
-            ref={formRef}
-            className={cn("transition-all duration-500", formInView && "animate-slide-up delay-2")}
-          >
-            <Card className={cn("glass border-amber-200/80 shadow-xl", formInView && "animate-scale-in")}>
-              <CardHeader>
-                <h2 className="text-xl font-semibold text-black">Volunteer details</h2>
-                <p className="text-sm text-black/75 mt-1">
-                  Fields marked <span className="text-black">*</span> are required.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium text-black mb-1">
-                      Full Name <span className="text-black">*</span>
-                    </label>
-                    <input
-                      id="fullName"
-                      type="text"
-                      autoComplete="name"
-                      value={form.fullName}
-                      onChange={(e) => update("fullName", e.target.value)}
-                      className={cn(
-                        "mt-1 block w-full rounded-lg border border-amber-300/80",
-                        "bg-white text-black placeholder:text-neutral-500",
-                        "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      )}
-                      placeholder="Your full name"
-                    />
-                  </div>
+        <SectionRule />
 
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-black mb-1">
-                      Phone Number <span className="text-black">*</span>
-                    </label>
-                    <input
-                      id="phone"
-                      type="tel"
-                      autoComplete="tel"
-                      value={form.phone}
-                      onChange={(e) => update("phone", e.target.value)}
-                      className={cn(
-                        "mt-1 block w-full rounded-lg border border-amber-300/80",
-                        "bg-white text-black placeholder:text-neutral-500",
-                        "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      )}
-                      placeholder="e.g. (416) 555-0123"
-                    />
-                  </div>
-
-                  <div>
-                    <span className="block text-sm font-medium text-black mb-2">
-                      Gender <span className="text-black">*</span>
-                    </span>
-                    <div className="flex flex-wrap gap-3">
-                      {["Male", "Female"].map((g) => (
-                        <label
-                          key={g}
-                          className={cn(
-                            "flex items-center gap-2 cursor-pointer rounded-lg border px-4 py-2.5 transition-colors",
-                            form.gender === g
-                              ? "border-amber-500 bg-amber-100 text-black"
-                              : "border-amber-300/80 hover:border-amber-400 bg-white text-black"
-                          )}
-                        >
-                          <input
-                            type="radio"
-                            name="gender"
-                            value={g}
-                            checked={form.gender === g}
-                            onChange={(e) => update("gender", e.target.value)}
-                            className="sr-only"
-                          />
-                          {g}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="areaOfVolunteering" className="block text-sm font-medium text-black mb-1">
-                      Area of Volunteering <span className="text-black">*</span>
-                    </label>
-                    <select
-                      id="areaOfVolunteering"
-                      value={form.areaOfVolunteering}
-                      onChange={(e) => update("areaOfVolunteering", e.target.value)}
-                      className={cn(
-                        "mt-1 block w-full rounded-lg border border-amber-300/80",
-                        "bg-white text-black",
-                        "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      )}
-                    >
-                      <option value="">Select an area</option>
-                      {VOLUNTEER_AREAS.map(({ value, label }) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    {showOthersField && (
-                      <div className="mt-3">
-                        <label htmlFor="otherVolunteerArea" className="block text-sm font-medium text-black mb-1">
-                          Please specify (Others) <span className="text-black">*</span>
-                        </label>
-                        <input
-                          id="otherVolunteerArea"
-                          type="text"
-                          value={form.otherVolunteerArea}
-                          onChange={(e) => update("otherVolunteerArea", e.target.value)}
-                          className={cn(
-                            "mt-1 block w-full rounded-lg border border-amber-300/80",
-                            "bg-white text-black placeholder:text-neutral-500",
-                            "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                          )}
-                          placeholder="Describe how you’d like to serve"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="block text-sm font-medium text-black mb-1">
-                      Available project dates <span className="text-black">*</span>
-                    </span>
-                    <p className="text-xs text-black/75 mb-3">
-                      Select all dates you can help. You can also add details in the notes box below.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {PROJECT_DATES.map(({ key, label }) => (
-                        <label
-                          key={key}
-                          className={cn(
-                            "flex items-center gap-2 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors",
-                            form.availableDays[key]
-                              ? "border-amber-500 bg-amber-100 text-black"
-                              : "border-amber-300/80 bg-white text-black hover:border-amber-400"
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={form.availableDays[key]}
-                            onChange={() => toggleDay(key)}
-                            className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                          />
-                          {label}
-                        </label>
-                      ))}
-                    </div>
-                    <label htmlFor="availabilityNotes" className="block text-sm font-medium text-black mt-4 mb-1">
-                      Availability notes (optional if dates are selected above)
-                    </label>
-                    <textarea
-                      id="availabilityNotes"
-                      rows={3}
-                      value={form.availabilityNotes}
-                      onChange={(e) => update("availabilityNotes", e.target.value)}
-                      className={cn(
-                        "mt-1 block w-full rounded-lg border border-amber-300/80",
-                        "bg-white text-black placeholder:text-neutral-500",
-                        "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      )}
-                      placeholder="e.g. Mornings only, or partial hours on selected dates"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="volunteerHours" className="block text-sm font-medium text-black mb-1">
-                      Number of hours you want to spend <span className="text-black">*</span>
-                    </label>
-                    <input
-                      id="volunteerHours"
-                      type="text"
-                      inputMode="decimal"
-                      value={form.volunteerHours}
-                      onChange={(e) => update("volunteerHours", e.target.value)}
-                      className={cn(
-                        "mt-1 block w-full rounded-lg border border-amber-300/80",
-                        "bg-white text-black placeholder:text-neutral-500",
-                        "px-4 py-2.5 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      )}
-                      placeholder="e.g. 8 or 8–12 total"
-                    />
-                  </div>
-
-                  <div className="pt-2">
-                    <Button
-                      type="submit"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? "Submitting…" : "Submit registration"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </section>
-
-          <SectionRule />
-
-          {/* FOOTER */}
-          <footer className="text-center text-white text-sm sm:text-base space-y-4 drop-shadow-md px-2 no-print">
-            <p className="leading-relaxed max-w-xl mx-auto">
-              Thank you for your willingness to serve and be part of what God is doing through this
-              project. Your time and service are highly valued and appreciated.
-            </p>
-            <blockquote className="italic text-white/95 max-w-lg mx-auto border-l-4 border-amber-400/80 pl-4 text-left">
-              &ldquo;Each of you should use whatever gift you have received to serve others.&rdquo; – 1
-              Peter 4:10
-            </blockquote>
-            <p className="text-white/90">
-              For inquiries or further information, please contact the project coordination team.
-            </p>
-            <p className="text-white/80 text-xs sm:text-sm pt-2">
-              © Gospel Pillars Toronto 2026
-            </p>
-          </footer>
-        </div>
+        <footer className="no-print space-y-4 px-2 text-center text-sm text-ivory-50 drop-shadow-md sm:text-base">
+          <p className="pt-2 text-xs text-ivory-50/80 sm:text-sm">© Gospel Pillars Toronto 2026</p>
+        </footer>
       </div>
+    </div>
   );
 }
