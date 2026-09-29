@@ -45,7 +45,7 @@ export function RegistrationPage() {
               className="mx-auto mb-5 h-20 w-auto rounded-lg border border-gold-500/35 object-contain shadow-sm sm:h-24"
             />
             <h1 className="mb-4 text-xl leading-tight font-bold text-forest-950 sm:text-2xl md:text-3xl">
-              Winter Welfare Sunday Registration Form
+              Winter Welfare Registration Form
             </h1>
             <div className="mx-auto max-w-2xl space-y-4 text-left text-sm leading-relaxed text-text sm:text-base">
               <p>

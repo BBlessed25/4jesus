@@ -1,11 +1,18 @@
 import {
   DUPLICATE_REGISTRATION_MESSAGE,
   isRegistrationClosed,
-  JACKET_LIMITS,
   REGISTRATION_CLOSED_MESSAGE,
   validateMemberResponse,
   validateVisitorRegistration,
 } from "../src/lib/registration.js";
+
+export const JACKET_LIMITS = Object.freeze({
+  Small: 46,
+  Medium: 40,
+  Large: 2,
+  XL: 1,
+  "2XL": 10,
+});
 
 export function inventoryFromRegistrations(registrations, limits = JACKET_LIMITS) {
   const remaining = { ...limits };

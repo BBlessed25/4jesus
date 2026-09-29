@@ -2,13 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   FIELD_ERRORS,
-  JACKET_LIMITS,
   normalizeCanadianPhone,
   validateField,
   validateVisitorRegistration,
 } from "../src/lib/registration.js";
 import {
   createInMemoryRegistrationStore,
+  JACKET_LIMITS,
   sanitizeSpreadsheetValue,
 } from "../server/registrationCore.js";
 

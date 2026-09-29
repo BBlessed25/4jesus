@@ -159,6 +159,8 @@ test("jacket availability endpoint returns JSON instead of SPA HTML", async () =
         return JSON.stringify({
           ok: true,
           closed: false,
+          inventory: { Small: 46, Medium: 40, Large: 2, XL: 1, "2XL": 10 },
+          internalDebug: "must not reach the browser",
           sizes: [
             { size: "Small", capacity: 46, claimed: 0, remaining: 46, available: true },
             { size: "Medium", capacity: 40, claimed: 0, remaining: 40, available: true },
@@ -180,9 +182,49 @@ test("jacket availability endpoint returns JSON instead of SPA HTML", async () =
     assert.equal(response.statusCode, 200);
     assert.match(response.headers["Content-Type"], /^application\/json/);
     assert.equal(response.body.ok, true);
-    assert.equal(response.body.sizes[0].remaining, 46);
+    assert.deepEqual(response.body, {
+      ok: true,
+      closed: false,
+      sizes: [
+        { size: "Small", available: true },
+        { size: "Medium", available: true },
+        { size: "Large", available: true },
+        { size: "XL", available: true },
+        { size: "2XL", available: true },
+      ],
+    });
+    assert.equal(/capacity|claimed|remaining/.test(JSON.stringify(response.body)), false);
     assert.deepEqual(Object.keys(forwarded).sort(), ["action", "secret"]);
     assert.equal(forwarded.action, "availability");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("sold-out registration responses do not expose inventory quantities", async () => {
+  setEnvironment();
+  resetRateLimitsForTests();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    async text() {
+      return JSON.stringify({
+        ok: false,
+        code: "SIZE_UNAVAILABLE",
+        message: "This size is no longer available. Please select another available size.",
+        inventory: { Small: 0 },
+        sizes: [{ size: "Small", capacity: 46, claimed: 46, remaining: 0, available: false }],
+      });
+    },
+  });
+  try {
+    const response = mockResponse();
+    await registerHandler(mockRequest(validBody()), response);
+
+    assert.equal(response.statusCode, 409);
+    assert.deepEqual(response.body.sizes, [{ size: "Small", available: false }]);
+    assert.equal(Object.hasOwn(response.body, "inventory"), false);
+    assert.equal(/capacity|claimed|remaining/.test(JSON.stringify(response.body)), false);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -211,5 +253,36 @@ test("cross-origin browser requests are rejected before Apps Script is called", 
     assert.equal(fetchCalled, false);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("missing Apps Script URL and shared secret return configuration details", async () => {
+  setEnvironment();
+  delete process.env.GOOGLE_APPS_SCRIPT_URL;
+  delete process.env.CHURCH_PROJECT_SHARED_SECRET;
+  resetRateLimitsForTests();
+  const originalFetch = globalThis.fetch;
+  let fetchCalled = false;
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    throw new Error("should not be called");
+  };
+  try {
+    const response = mockResponse();
+    await registerHandler(mockRequest(validBody()), response);
+    assert.equal(response.statusCode, 500);
+    assert.deepEqual(response.body, {
+      ok: false,
+      code: "SERVER_CONFIGURATION_ERROR",
+      message: "Registration service is not configured.",
+      missing: {
+        appsScriptUrl: true,
+        sharedSecret: true,
+      },
+    });
+    assert.equal(fetchCalled, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    setEnvironment();
   }
 });

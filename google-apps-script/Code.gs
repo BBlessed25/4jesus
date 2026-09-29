@@ -1,5 +1,5 @@
 /**
- * Church_Project Winter Welfare Sunday Google Sheets backend.
+ * Church_Project Winter Welfare Google Sheets backend.
  *
  * Name both the Google spreadsheet and Apps Script project Church_Project.
  * Bind this script to that spreadsheet, or set a SPREADSHEET_ID Script

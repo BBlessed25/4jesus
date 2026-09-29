@@ -1,13 +1,13 @@
-/** @typedef {Error & { code?: string, errors?: Record<string, string>, inventory?: Record<string, number> | null }} RegistrationError */
+/** @typedef {Error & { code?: string, errors?: Record<string, string>, inventory?: Record<string, boolean> | null }} RegistrationError */
 
 function inventoryFromSizes(sizes) {
   if (!Array.isArray(sizes)) return null;
   const inventory = {};
   for (const item of sizes) {
-    if (!item || typeof item.size !== "string" || !Number.isFinite(Number(item.remaining))) {
+    if (!item || typeof item.size !== "string" || typeof item.available !== "boolean") {
       return null;
     }
-    inventory[item.size] = Number(item.remaining);
+    inventory[item.size] = item.available;
   }
   return inventory;
 }

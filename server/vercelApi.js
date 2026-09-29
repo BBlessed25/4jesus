@@ -1,6 +1,6 @@
 import { isRegistrationClosed } from "../src/lib/registration.js";
 
-/** @typedef {Error & { code?: string }} CodedError */
+/** @typedef {Error & { code?: string, missing?: { appsScriptUrl: boolean, sharedSecret: boolean } }} CodedError */
 
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const rateLimitBuckets = new Map();
@@ -140,9 +140,21 @@ export function getRequestBody(request) {
 }
 
 export function getServerConfig() {
+  const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+  const sharedSecret = process.env.CHURCH_PROJECT_SHARED_SECRET;
+  if (!appsScriptUrl || !sharedSecret) {
+    const error = /** @type {CodedError} */ (new Error("Registration service is not configured."));
+    error.code = "SERVER_CONFIGURATION_ERROR";
+    error.missing = {
+      appsScriptUrl: !appsScriptUrl,
+      sharedSecret: !sharedSecret,
+    };
+    throw error;
+  }
+
   const config = {
-    appsScriptUrl: String(process.env.GOOGLE_APPS_SCRIPT_URL || "").trim(),
-    sharedSecret: String(process.env.CHURCH_PROJECT_SHARED_SECRET || "").trim(),
+    appsScriptUrl: String(appsScriptUrl).trim(),
+    sharedSecret: String(sharedSecret).trim(),
     closesAt: String(process.env.REGISTRATION_CLOSES_AT || "").trim(),
     timezone: String(process.env.APP_TIMEZONE || "").trim(),
     allowedOrigin: String(process.env.ALLOWED_ORIGIN || "").trim(),
@@ -250,6 +262,18 @@ export async function callAppsScript(action, data, config = getServerConfig()) {
   }
 }
 
+export function sanitizeAppsScriptResultForBrowser(result) {
+  const sanitized = { ...result };
+  delete sanitized.inventory;
+  if (Array.isArray(result?.sizes)) {
+    sanitized.sizes = result.sizes.map((item) => ({
+      size: String(item?.size || ""),
+      available: item?.available === true,
+    }));
+  }
+  return sanitized;
+}
+
 export function backendStatus(code) {
   return (
     {
@@ -260,6 +284,7 @@ export function backendStatus(code) {
       SIZE_UNAVAILABLE: 409,
       REGISTRATION_CLOSED: 410,
       INVALID_JSON: 400,
+      SERVER_CONFIGURATION_ERROR: 500,
       CONFIGURATION_ERROR: 500,
       GOOGLE_BACKEND_UNAVAILABLE: 503,
     }[code] || 502
@@ -272,6 +297,17 @@ export function registrationClosed(config = getServerConfig(), now = new Date())
 
 export function handleEndpointError(response, error) {
   const code = error?.code || "GOOGLE_BACKEND_UNAVAILABLE";
+  if (code === "SERVER_CONFIGURATION_ERROR") {
+    return sendJson(response, 500, {
+      ok: false,
+      code: "SERVER_CONFIGURATION_ERROR",
+      message: "Registration service is not configured.",
+      missing: error.missing || {
+        appsScriptUrl: !process.env.GOOGLE_APPS_SCRIPT_URL,
+        sharedSecret: !process.env.CHURCH_PROJECT_SHARED_SECRET,
+      },
+    });
+  }
   const message =
     code === "CONFIGURATION_ERROR"
       ? "Registration service is not configured."

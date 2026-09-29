@@ -7,6 +7,7 @@ import {
   guardRequest,
   handleEndpointError,
   registrationClosed,
+  sanitizeAppsScriptResultForBrowser,
   sendJson,
 } from "../server/vercelApi.js";
 
@@ -41,7 +42,9 @@ export default async function handler(request, response) {
       });
     }
 
-    const result = await callAppsScript("recordMember", value, config);
+    const result = sanitizeAppsScriptResultForBrowser(
+      await callAppsScript("recordMember", value, config)
+    );
     return sendJson(response, result.ok === false ? backendStatus(result.code) : 200, result);
   } catch (error) {
     return handleEndpointError(response, error);

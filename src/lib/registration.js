@@ -1,10 +1,4 @@
-export const JACKET_LIMITS = Object.freeze({
-  Small: 46,
-  Medium: 40,
-  Large: 2,
-  XL: 1,
-  "2XL": 10,
-});
+export const JACKET_SIZES = Object.freeze(["Small", "Medium", "Large", "XL", "2XL"]);
 
 export const VISITOR_FIELDS = Object.freeze([
   "registrationType",
@@ -90,7 +84,7 @@ export function validateField(field, value, context = {}) {
     case "gender":
       return value === "Male" || value === "Female" ? "" : FIELD_ERRORS.gender;
     case "jacketSize": {
-      if (!Object.hasOwn(JACKET_LIMITS, value)) return FIELD_ERRORS.jacketSize;
+      if (!JACKET_SIZES.includes(value)) return FIELD_ERRORS.jacketSize;
       if (context.inventory && Number(context.inventory[value]) <= 0) {
         return "This size is no longer available. Please select another available size.";
       }

@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RegistrationWizard } from "../src/components/RegistrationWizard";
-import { JACKET_LIMITS, MEMBER_CONFIRMATION, VISITOR_CONFIRMATION } from "../src/lib/registration";
+import { JACKET_SIZES, MEMBER_CONFIRMATION, VISITOR_CONFIRMATION } from "../src/lib/registration";
+
+const AVAILABLE_SIZES = Object.fromEntries(JACKET_SIZES.map((size) => [size, true]));
 
 const api = vi.hoisted(() => ({
   fetchJacketAvailability: vi.fn(),
@@ -12,18 +14,36 @@ const api = vi.hoisted(() => ({
 
 vi.mock("../src/lib/submitToGoogleSheet", () => api);
 
+async function reachJacketSize(user) {
+  await user.click(screen.getByRole("radio", { name: "Visitor" }));
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+  await user.type(screen.getByRole("textbox", { name: "Full Name" }), "Jordan Smith");
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+  await user.type(screen.getByRole("textbox", { name: "Phone Number" }), "416-555-1234");
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+  await user.type(screen.getByRole("textbox", { name: "Email Address" }), "jordan@example.com");
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+  await user.type(screen.getByRole("textbox", { name: "Location (City or Area)" }), "Toronto");
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+  await user.type(screen.getByRole("spinbutton", { name: "Age" }), "27");
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+  await user.click(screen.getByRole("radio", { name: "Female" }));
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+  await screen.findByRole("heading", { name: "Jacket Size" });
+}
+
 describe("RegistrationWizard", () => {
   beforeEach(() => {
     api.fetchJacketAvailability.mockResolvedValue({
       ok: true,
       closed: false,
-      inventory: { ...JACKET_LIMITS },
+      inventory: { ...AVAILABLE_SIZES },
     });
     api.recordMemberResponse.mockResolvedValue({ ok: true, registrationId: "WWS-2026-MEMBER1" });
     api.submitVisitorRegistration.mockResolvedValue({
       ok: true,
       registrationId: "WWS-2026-ABC12345",
-      inventory: { ...JACKET_LIMITS, Small: 45 },
+      inventory: { ...AVAILABLE_SIZES },
     });
   });
 
@@ -74,6 +94,8 @@ describe("RegistrationWizard", () => {
     await user.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(api.fetchJacketAvailability).toHaveBeenCalled());
+    expect(screen.queryByText(/\d+\s+remaining/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/checked at submission/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: /^Small/ }));
     await user.click(screen.getByRole("button", { name: /continue/i }));
     await user.click(screen.getByRole("radio", { name: "Email" }));
@@ -96,11 +118,28 @@ describe("RegistrationWizard", () => {
     api.fetchJacketAvailability.mockResolvedValue({
       ok: true,
       closed: true,
-      inventory: { ...JACKET_LIMITS },
+      inventory: { ...AVAILABLE_SIZES },
     });
     render(<RegistrationWizard />);
     expect(await screen.findByText("Registration is now closed.")).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "Visitor" })).not.toBeInTheDocument();
+  });
+
+  it("shows only availability status and disables sold-out sizes", async () => {
+    api.fetchJacketAvailability.mockResolvedValue({
+      ok: true,
+      closed: false,
+      inventory: { ...AVAILABLE_SIZES, Large: false },
+    });
+    const user = userEvent.setup();
+    render(<RegistrationWizard />);
+
+    await reachJacketSize(user);
+
+    expect(screen.getByRole("radio", { name: /^Large/ })).toBeDisabled();
+    expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.queryByText(/\d+\s+remaining/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/capacity|claimed|stock/i)).not.toBeInTheDocument();
   });
 
   it("allows a visitor past jacket size when live availability is temporarily unavailable", async () => {

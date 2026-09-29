@@ -6,7 +6,7 @@ import {
   cleanSpaces,
   DUPLICATE_REGISTRATION_MESSAGE,
   firstInvalidVisitorField,
-  JACKET_LIMITS,
+  JACKET_SIZES,
   MEMBER_CONFIRMATION,
   normalizeCanadianPhone,
   normalizeEmail,
@@ -54,22 +54,14 @@ function newForm() {
   };
 }
 
-function ChoiceList({
-  field,
-  value,
-  options,
-  onChange,
-  inventory = null,
-  disabled = false,
-  showRemaining = true,
-}) {
+function ChoiceList({ field, value, options, onChange, inventory = null, disabled = false }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label={field}>
       {options.map((option) => {
         const optionValue = typeof option === "string" ? option : option.value;
         const label = typeof option === "string" ? option : option.label;
-        const remaining = field === "jacketSize" ? Number(inventory?.[optionValue]) : null;
-        const unavailable = disabled || (field === "jacketSize" && remaining <= 0);
+        const available = field !== "jacketSize" || inventory?.[optionValue] !== false;
+        const unavailable = disabled || !available;
         return (
           <label
             key={optionValue}
@@ -95,13 +87,9 @@ function ChoiceList({
               />
               <span>{label}</span>
             </span>
-            {field === "jacketSize" && (
+            {field === "jacketSize" && unavailable && (
               <span className="whitespace-nowrap text-xs font-medium text-neutral-700">
-                {remaining <= 0
-                  ? "Unavailable"
-                  : showRemaining
-                    ? `${remaining} remaining`
-                    : "Checked at submission"}
+                Unavailable
               </span>
             )}
           </label>
@@ -160,7 +148,6 @@ export function RegistrationWizard() {
   const [status, setStatus] = useState("form");
   const [error, setError] = useState("");
   const [inventory, setInventory] = useState(null);
-  const [inventoryIsLive, setInventoryIsLive] = useState(false);
   const [inventoryError, setInventoryError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationId, setRegistrationId] = useState("");
@@ -176,11 +163,9 @@ export function RegistrationWizard() {
         return { ok: false, closed: true };
       }
       setInventory(latest.inventory);
-      setInventoryIsLive(true);
       return { ok: true, closed: false };
     } catch (availabilityError) {
-      setInventory({ ...JACKET_LIMITS });
-      setInventoryIsLive(false);
+      setInventory(Object.fromEntries(JACKET_SIZES.map((size) => [size, true])));
       setInventoryError(
         `${availabilityError.message || "Live jacket availability could not be loaded."} You can still select a size and continue; availability will be checked when you submit.`
       );
@@ -265,14 +250,12 @@ export function RegistrationWizard() {
       const result = await submitVisitorRegistration(form);
       if (result.inventory) {
         setInventory(result.inventory);
-        setInventoryIsLive(true);
       }
       setRegistrationId(result.registrationId || "");
       setStatus("visitorComplete");
     } catch (submissionError) {
       if (submissionError.inventory) {
         setInventory(submissionError.inventory);
-        setInventoryIsLive(true);
       }
       if (submissionError.code === "SIZE_UNAVAILABLE") {
         setStepIndex(FIELD_STEP_INDEX.jacketSize);
@@ -522,10 +505,9 @@ export function RegistrationWizard() {
                 <ChoiceList
                   field="jacketSize"
                   value={form.jacketSize}
-                  options={Object.keys(JACKET_LIMITS)}
+                  options={JACKET_SIZES}
                   onChange={(value) => update("jacketSize", value)}
                   inventory={inventory}
-                  showRemaining={inventoryIsLive}
                 />
               )}
               {step.field === "preferredContactMethod" && (

@@ -15,17 +15,17 @@ afterEach(() => {
 });
 
 describe("same-origin Vercel API client", () => {
-  it("maps the Apps Script sizes response to the existing inventory model", async () => {
+  it("maps public size availability without exposing inventory quantities", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         ok: true,
         closed: false,
         sizes: [
-          { size: "Small", capacity: 46, claimed: 1, remaining: 45, available: true },
-          { size: "Medium", capacity: 40, claimed: 0, remaining: 40, available: true },
-          { size: "Large", capacity: 2, claimed: 0, remaining: 2, available: true },
-          { size: "XL", capacity: 1, claimed: 0, remaining: 1, available: true },
-          { size: "2XL", capacity: 10, claimed: 0, remaining: 10, available: true },
+          { size: "Small", available: true },
+          { size: "Medium", available: true },
+          { size: "Large", available: false },
+          { size: "XL", available: true },
+          { size: "2XL", available: true },
         ],
       })
     );
@@ -33,7 +33,14 @@ describe("same-origin Vercel API client", () => {
 
     const result = await fetchJacketAvailability();
 
-    expect(result.inventory).toEqual({ Small: 45, Medium: 40, Large: 2, XL: 1, "2XL": 10 });
+    expect(result.inventory).toEqual({
+      Small: true,
+      Medium: true,
+      Large: false,
+      XL: true,
+      "2XL": true,
+    });
+    expect(JSON.stringify(result)).not.toMatch(/capacity|claimed|remaining/);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/jacket-availability",
       expect.objectContaining({ method: "GET" })
@@ -73,7 +80,7 @@ describe("same-origin Vercel API client", () => {
             ok: false,
             code: "SIZE_UNAVAILABLE",
             message: "This size is no longer available. Please select another available size.",
-            sizes: [{ size: "Small", capacity: 46, claimed: 46, remaining: 0, available: false }],
+            sizes: [{ size: "Small", available: false }],
           },
           { ok: false }
         )
@@ -82,7 +89,7 @@ describe("same-origin Vercel API client", () => {
 
     await expect(submitVisitorRegistration({ jacketSize: "Small" })).rejects.toMatchObject({
       code: "SIZE_UNAVAILABLE",
-      inventory: { Small: 0 },
+      inventory: { Small: false },
     });
   });
 

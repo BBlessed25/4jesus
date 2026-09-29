@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 
-const defaultTitle = "Winter Welfare Sunday Registration Form | Gospel Pillars";
-const defaultDescription = "Register for Winter Welfare Sunday with Gospel Pillars.";
+const defaultTitle = "Winter Welfare Registration Form | Gospel Pillars";
+const defaultDescription = "Register for Winter Welfare with Gospel Pillars.";
 
 export function SEO({
   title = defaultTitle,

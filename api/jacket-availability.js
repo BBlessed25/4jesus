@@ -5,6 +5,7 @@ import {
   guardRequest,
   handleEndpointError,
   registrationClosed,
+  sanitizeAppsScriptResultForBrowser,
   sendJson,
 } from "../server/vercelApi.js";
 
@@ -20,8 +21,16 @@ export default async function handler(request, response) {
       })
     )
       return;
-    const result = await callAppsScript("availability", undefined, config);
-    if (result.ok !== false) result.closed = Boolean(result.closed || registrationClosed(config));
+    const internalResult = await callAppsScript("availability", undefined, config);
+    const sanitizedResult = sanitizeAppsScriptResultForBrowser(internalResult);
+    const result =
+      sanitizedResult.ok === false
+        ? sanitizedResult
+        : {
+            ok: true,
+            closed: Boolean(sanitizedResult.closed || registrationClosed(config)),
+            sizes: Array.isArray(sanitizedResult.sizes) ? sanitizedResult.sizes : [],
+          };
     return sendJson(response, result.ok === false ? backendStatus(result.code) : 200, result);
   } catch (error) {
     return handleEndpointError(response, error);

@@ -1,4 +1,4 @@
-# Church_Project — Winter Welfare Sunday Registration
+# Church_Project — Winter Welfare Registration
 
 Responsive, one-question-at-a-time winter-jacket registration for Gospel Pillars Church Toronto.
 
