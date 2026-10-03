@@ -75,6 +75,18 @@ test("a valid visitor registration succeeds and reserves one jacket", async () =
   assert.equal(store.all()[0].status, "confirmed");
 });
 
+test("visitors aged 12 can register, while visitors under 12 are rejected", async () => {
+  const store = createInMemoryRegistrationStore();
+  const underage = await store.submitVisitor(validForm({ age: "11" }));
+  assert.equal(underage.code, "VALIDATION_ERROR");
+  assert.equal(underage.errors.age, FIELD_ERRORS.age);
+  assert.equal(store.all().length, 0);
+
+  const eligible = await store.submitVisitor(validForm({ age: "12" }));
+  assert.equal(eligible.ok, true);
+  assert.equal(store.all()[0].age, 12);
+});
+
 for (const [size, limit] of Object.entries(JACKET_LIMITS)) {
   test(`${size} reaches its capacity of ${limit}`, async () => {
     const registrations = Array.from({ length: limit }, (_, index) =>

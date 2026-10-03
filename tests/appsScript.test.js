@@ -184,6 +184,18 @@ const visitor = {
   idempotencyKey: "sheet_test_key_001",
 };
 
+test("Apps Script accepts age 12 and rejects age 11 without reserving a jacket", () => {
+  const { post, sheets } = createAppsScriptHarness();
+  const underage = post("registerVisitor", { ...visitor, age: "11" });
+  assert.equal(underage.code, "VALIDATION_ERROR");
+  assert.equal(underage.errors.age, "You must be at least 12 years old to register.");
+
+  const eligible = post("registerVisitor", { ...visitor, age: "12" });
+  assert.equal(eligible.ok, true);
+  assert.equal(sheets.get("Registrations").rows.length, 2);
+  assert.equal(sheets.get("Registrations").rows[1][7], 12);
+});
+
 test("Apps Script accepts visitors after the date, rejects replay, and preserves inventory for members", () => {
   const { post, sheets, lockHeld } = createAppsScriptHarness();
   assert.equal(post("availability").closed, false);
