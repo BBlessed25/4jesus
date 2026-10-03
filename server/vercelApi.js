@@ -196,7 +196,7 @@ export function getServerConfig() {
 
 export async function callAppsScript(action, data, config = getServerConfig()) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
+  const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
     const response = await fetch(config.appsScriptUrl, {
       method: "POST",

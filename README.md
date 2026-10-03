@@ -63,7 +63,7 @@ Do not prefix these variables with `VITE_`, `PUBLIC_`, or another client-visible
 - `POST /api/register`
 - `POST /api/member-response`
 
-The Vercel layer independently validates input, rejects cross-site browser requests, applies best-effort per-instance rate limits, uses an eight-second Google timeout, and never logs request bodies or secrets. It sends Apps Script `{ action, secret, data }`; availability requests omit `data`. Apps Script authenticates every action and repeats the authoritative validation.
+The Vercel layer independently validates input, rejects cross-site browser requests, applies best-effort per-instance rate limits, uses a thirty-second Google timeout within a forty-five-second function limit, and never logs request bodies or secrets. This accommodates slower Google Sheets responses and lock contention. It sends Apps Script `{ action, secret, data }`; availability requests omit `data`. Apps Script authenticates every action and repeats the authoritative validation.
 
 ## Commands
 
