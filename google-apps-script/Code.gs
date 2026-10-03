@@ -37,7 +37,7 @@ var DEFAULT_INVENTORY = {
 var DUPLICATE_MESSAGE = "You have already registered. Please do not register again.";
 var SIZE_UNAVAILABLE_MESSAGE =
   "This size is no longer available. Please select another available size.";
-var CLOSED_MESSAGE = "Registration is now closed.";
+var CLOSED_MESSAGE = "Registration is now closed. All available jackets have been reserved.";
 var VISITOR_SUCCESS_MESSAGE =
   "Thank you for registering. Your details have been saved. See you at the event.";
 var MEMBER_SUCCESS_MESSAGE =
@@ -70,10 +70,11 @@ function doPost(e) {
 
 function handleAvailability_(request) {
   var sheets = ensureSheets_();
+  var sizes = availabilitySizes_(sheets.registrations, sheets.inventory);
   return json_({
     ok: true,
-    closed: isRegistrationClosed_(),
-    sizes: availabilitySizes_(sheets.registrations, sheets.inventory),
+    closed: isInventoryFull_(sizes),
+    sizes: sizes,
   });
 }
 
@@ -83,8 +84,6 @@ function handleRegisterVisitor_(request) {
   try {
     lock.waitLock(30000);
     locked = true;
-
-    if (isRegistrationClosed_()) return closedResponse_();
 
     var validation = validateVisitor_(request.data || {});
     if (!validation.ok) {
@@ -107,6 +106,7 @@ function handleRegisterVisitor_(request) {
     }
 
     var sizes = availabilitySizesFromRows_(rows, sheets.inventory);
+    if (isInventoryFull_(sizes)) return closedResponse_();
     var selectedSize = sizes.filter(function (item) {
       return item.size === visitor.jacketSize;
     })[0];
@@ -153,8 +153,6 @@ function handleRecordMember_(request) {
     lock.waitLock(30000);
     locked = true;
 
-    if (isRegistrationClosed_()) return closedResponse_();
-
     var data = request.data || {};
     var errors = {};
     if (data.registrationType !== "Member") {
@@ -174,6 +172,9 @@ function handleRecordMember_(request) {
 
     var sheets = ensureSheets_();
     var rows = registrationRows_(sheets.registrations);
+    if (isInventoryFull_(availabilitySizesFromRows_(rows, sheets.inventory))) {
+      return closedResponse_();
+    }
     if (hasDuplicateIdempotencyKey_(rows, data.idempotencyKey)) {
       return duplicateResponse_();
     }
@@ -439,15 +440,10 @@ function authenticateSharedSecret_(providedSecret) {
   return difference === 0;
 }
 
-function isRegistrationClosed_() {
-  var propertyValue = PropertiesService.getScriptProperties().getProperty("REGISTRATION_CLOSES_AT");
-  var closesAt = propertyValue;
-  var timezone = Session.getScriptTimeZone();
-  if (!closesAt) throw new Error("Missing REGISTRATION_CLOSES_AT Script Property.");
-  Utilities.formatDate(new Date(), timezone, "yyyy-MM-dd HH:mm:ss");
-  var timestamp = new Date(closesAt).getTime();
-  if (!Number.isFinite(timestamp)) throw new Error("Invalid registration closing time.");
-  return new Date().getTime() > timestamp;
+function isInventoryFull_(sizes) {
+  return sizes.every(function (item) {
+    return !item.available;
+  });
 }
 
 function sanitizeForSheet_(value) {

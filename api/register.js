@@ -1,7 +1,4 @@
-import {
-  REGISTRATION_CLOSED_MESSAGE,
-  validateVisitorRegistration,
-} from "../src/lib/registration.js";
+import { validateVisitorRegistration } from "../src/lib/registration.js";
 import {
   backendStatus,
   callAppsScript,
@@ -9,7 +6,6 @@ import {
   getServerConfig,
   guardRequest,
   handleEndpointError,
-  registrationClosed,
   sanitizeAppsScriptResultForBrowser,
   sendJson,
 } from "../server/vercelApi.js";
@@ -26,14 +22,6 @@ export default async function handler(request, response) {
       })
     )
       return;
-    if (registrationClosed(config)) {
-      return sendJson(response, 410, {
-        ok: false,
-        code: "REGISTRATION_CLOSED",
-        message: REGISTRATION_CLOSED_MESSAGE,
-      });
-    }
-
     const body = getRequestBody(request);
     const { errors, value } = validateVisitorRegistration(body);
     if (Object.keys(errors).length) {

@@ -21,7 +21,8 @@ export const VISITOR_CONFIRMATION =
 export const DUPLICATE_REGISTRATION_MESSAGE =
   "You have already registered. Please do not register again.";
 
-export const REGISTRATION_CLOSED_MESSAGE = "Registration is now closed.";
+export const REGISTRATION_CLOSED_MESSAGE =
+  "Registration is now closed. All available jackets have been reserved.";
 
 export const FIELD_ERRORS = Object.freeze({
   registrationType: "Please select Member or Visitor.",
@@ -144,9 +145,8 @@ export function validateMemberResponse(form) {
   };
 }
 
-export function isRegistrationClosed(closesAt, now = new Date()) {
-  const closingTime = new Date(closesAt).getTime();
-  return Number.isFinite(closingTime) && now.getTime() > closingTime;
+export function isInventoryFull(inventory) {
+  return Object.values(inventory).every((remaining) => Number(remaining) <= 0);
 }
 
 export function firstInvalidVisitorField(form, context = {}) {

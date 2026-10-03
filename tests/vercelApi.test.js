@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import availabilityHandler from "../api/jacket-availability.js";
 import registerHandler from "../api/register.js";
+import memberHandler from "../api/member-response.js";
 import { resetRateLimitsForTests } from "../server/vercelApi.js";
 
 function validBody(overrides = {}) {
@@ -59,7 +60,7 @@ function mockRequest(body, { method = "POST", origin = "", headers = {} } = {}) 
 function setEnvironment() {
   process.env.GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/test/exec";
   process.env.CHURCH_PROJECT_SHARED_SECRET = "test-shared-secret";
-  process.env.REGISTRATION_CLOSES_AT = "2099-10-02T23:59:59-04:00";
+  process.env.REGISTRATION_CLOSES_AT = "2000-01-01T00:00:00-05:00";
   process.env.APP_TIMEZONE = "America/Toronto";
   process.env.ALLOWED_ORIGIN = "https://winter.example.com";
 }
@@ -106,7 +107,7 @@ test("Google backend unavailability maps to HTTP 503 without exposing secrets", 
   }
 });
 
-test("Vercel register endpoint forwards one authenticated visitor action", async () => {
+test("Vercel register endpoint forwards a visitor action even after the old closing date", async () => {
   setEnvironment();
   resetRateLimitsForTests();
   const originalFetch = globalThis.fetch;
@@ -284,5 +285,73 @@ test("missing Apps Script URL and shared secret return configuration details", a
   } finally {
     globalThis.fetch = originalFetch;
     setEnvironment();
+  }
+});
+
+test("Vercel accepts visitor and member requests without a closing date setting", async () => {
+  setEnvironment();
+  delete process.env.REGISTRATION_CLOSES_AT;
+  resetRateLimitsForTests();
+  const originalFetch = globalThis.fetch;
+  const actions = [];
+  globalThis.fetch = async (_url, options) => {
+    actions.push(JSON.parse(options.body).action);
+    return { ok: true, text: async () => JSON.stringify({ ok: true, registrationId: "TEST" }) };
+  };
+  try {
+    const visitorResponse = mockResponse();
+    await registerHandler(mockRequest(validBody()), visitorResponse);
+    assert.equal(visitorResponse.statusCode, 200);
+    const memberResponse = mockResponse();
+    await memberHandler(
+      mockRequest({
+        registrationType: "Member",
+        idempotencyKey: "member_no_deadline_key",
+      }),
+      memberResponse
+    );
+    assert.equal(memberResponse.statusCode, 200);
+    assert.deepEqual(actions, ["registerVisitor", "recordMember"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    setEnvironment();
+  }
+});
+
+test("Vercel reports full inventory and rejects a stale submission when Apps Script is sold out", async () => {
+  setEnvironment();
+  resetRateLimitsForTests();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, options) => ({
+    ok: true,
+    text: async () =>
+      JSON.stringify(
+        JSON.parse(options.body).action === "availability"
+          ? {
+              ok: true,
+              closed: true,
+              sizes: ["Small", "Medium", "Large", "XL", "2XL"].map((size) => ({
+                size,
+                available: false,
+              })),
+            }
+          : {
+              ok: false,
+              code: "REGISTRATION_CLOSED",
+              message: "Registration is now closed. All available jackets have been reserved.",
+            }
+      ),
+  });
+  try {
+    const availability = mockResponse();
+    await availabilityHandler(mockRequest(undefined, { method: "GET" }), availability);
+    assert.equal(availability.statusCode, 200);
+    assert.equal(availability.body.closed, true);
+    const registration = mockResponse();
+    await registerHandler(mockRequest(validBody()), registration);
+    assert.equal(registration.statusCode, 410);
+    assert.equal(registration.body.code, "REGISTRATION_CLOSED");
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });

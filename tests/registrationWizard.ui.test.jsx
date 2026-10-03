@@ -121,14 +121,18 @@ describe("RegistrationWizard", () => {
     );
   });
 
-  it("shows the closed card when the server reports that registration has ended", async () => {
+  it("shows the closed card when all jackets have been reserved", async () => {
     api.fetchJacketAvailability.mockResolvedValue({
       ok: true,
       closed: true,
-      inventory: { ...AVAILABLE_SIZES },
+      inventory: Object.fromEntries(Object.keys(AVAILABLE_SIZES).map((size) => [size, false])),
     });
     render(<RegistrationWizard />);
-    expect(await screen.findByText("Registration is now closed.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Registration is now closed. All available jackets have been reserved."
+      )
+    ).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "Visitor" })).not.toBeInTheDocument();
   });
 

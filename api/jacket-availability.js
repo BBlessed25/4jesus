@@ -4,7 +4,6 @@ import {
   getServerConfig,
   guardRequest,
   handleEndpointError,
-  registrationClosed,
   sanitizeAppsScriptResultForBrowser,
   sendJson,
 } from "../server/vercelApi.js";
@@ -28,7 +27,7 @@ export default async function handler(request, response) {
         ? sanitizedResult
         : {
             ok: true,
-            closed: Boolean(sanitizedResult.closed || registrationClosed(config)),
+            closed: Boolean(sanitizedResult.closed),
             sizes: Array.isArray(sanitizedResult.sizes) ? sanitizedResult.sizes : [],
           };
     return sendJson(response, result.ok === false ? backendStatus(result.code) : 200, result);

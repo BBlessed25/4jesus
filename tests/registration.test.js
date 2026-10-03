@@ -143,13 +143,14 @@ test("a duplicate idempotency key is rejected without a second row", async () =>
   assert.equal(store.all().length, 1);
 });
 
-test("registration is rejected after the closing date", async () => {
+test("registration remains open after the displayed closing date while jackets remain", async () => {
   const store = createInMemoryRegistrationStore({
-    now: () => new Date("2026-10-03T00:00:00-04:00"),
+    now: () => new Date("2026-10-04T00:00:00-04:00"),
   });
   const result = await store.submitVisitor(validForm());
-  assert.equal(result.code, "REGISTRATION_CLOSED");
-  assert.equal(store.all().length, 0);
+  assert.equal(result.ok, true);
+  assert.equal(store.all().length, 1);
+  assert.equal(store.availability().closed, false);
 });
 
 test("a size sold out between selection and submission returns SIZE_UNAVAILABLE", async () => {
@@ -172,4 +173,27 @@ test("spreadsheet formula prefixes are escaped", () => {
     assert.equal(sanitizeSpreadsheetValue(value), `'${value}`);
   }
   assert.equal(sanitizeSpreadsheetValue("Toronto"), "Toronto");
+});
+
+test("registration closes when concurrent attempts claim the last jacket across all sizes", async () => {
+  const store = createInMemoryRegistrationStore({
+    limits: { Small: 0, Medium: 0, Large: 0, XL: 1, "2XL": 0 },
+    now: () => new Date("2026-10-04T12:00:00-04:00"),
+  });
+  assert.equal(store.availability().closed, false);
+  const results = await Promise.all([
+    store.submitVisitor(validForm({ jacketSize: "XL" })),
+    store.submitVisitor(
+      validForm({
+        jacketSize: "XL",
+        phone: "647-555-1234",
+        email: "second@example.com",
+        idempotencyKey: "last_jacket_second_key",
+      })
+    ),
+  ]);
+  assert.equal(results.filter((result) => result.ok).length, 1);
+  assert.equal(results.filter((result) => result.code === "REGISTRATION_CLOSED").length, 1);
+  assert.equal(store.availability().closed, true);
+  assert.equal(store.all().length, 1);
 });

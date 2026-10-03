@@ -38,61 +38,7 @@ test("Apps Script rejects an invalid shared secret before accessing Sheets", () 
   assert.equal(body.code, "UNAUTHORIZED");
 });
 
-test("Apps Script enforces the closing date while holding its lock", () => {
-  const source = readFileSync(new URL("../google-apps-script/Code.gs", import.meta.url), "utf8");
-  let lockHeld = false;
-  const context = {
-    PropertiesService: {
-      getScriptProperties: () => ({
-        getProperty: (name) =>
-          ({
-            CHURCH_PROJECT_SHARED_SECRET: "correct-secret-value",
-            REGISTRATION_CLOSES_AT: "2000-01-01T00:00:00-05:00",
-          })[name] || null,
-      }),
-    },
-    LockService: {
-      getScriptLock: () => ({
-        waitLock() {
-          lockHeld = true;
-        },
-        releaseLock() {
-          lockHeld = false;
-        },
-      }),
-    },
-    Utilities: {
-      formatDate: () => "2000-01-01 00:00:00",
-    },
-    Session: { getScriptTimeZone: () => "America/Toronto" },
-    ContentService: {
-      MimeType: { JSON: "json" },
-      createTextOutput: (text) => ({
-        text,
-        setMimeType() {
-          return this;
-        },
-      }),
-    },
-  };
-  vm.createContext(context);
-  vm.runInContext(source, context);
-
-  const response = context.doPost({
-    postData: {
-      contents: JSON.stringify({
-        action: "registerVisitor",
-        secret: "correct-secret-value",
-        data: {},
-      }),
-    },
-  });
-  const body = JSON.parse(response.text);
-  assert.equal(body.code, "REGISTRATION_CLOSED");
-  assert.equal(lockHeld, false);
-});
-
-test("Apps Script appends one visitor row, rejects its replay, and preserves inventory for members", () => {
+function createAppsScriptHarness({ closesAt = "2000-01-01T00:00:00-05:00" } = {}) {
   const source = readFileSync(new URL("../google-apps-script/Code.gs", import.meta.url), "utf8");
 
   class FakeRange {
@@ -153,6 +99,7 @@ test("Apps Script appends one visitor row, rejects its replay, and preserves inv
     setFrozenRows() {}
 
     appendRow(row) {
+      assert.equal(lockHeld, true, "registration writes must hold the lock");
       this.rows.push([...row]);
     }
   }
@@ -168,6 +115,7 @@ test("Apps Script appends one visitor row, rejects its replay, and preserves inv
     },
   };
   let nextUuid = 1;
+  let lockHeld = false;
   const context = {
     SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
     PropertiesService: {
@@ -175,12 +123,19 @@ test("Apps Script appends one visitor row, rejects its replay, and preserves inv
         getProperty: (name) =>
           ({
             CHURCH_PROJECT_SHARED_SECRET: "correct-secret-value",
-            REGISTRATION_CLOSES_AT: "2099-10-02T23:59:59-04:00",
+            REGISTRATION_CLOSES_AT: closesAt,
           })[name] || null,
       }),
     },
     LockService: {
-      getScriptLock: () => ({ waitLock() {}, releaseLock() {} }),
+      getScriptLock: () => ({
+        waitLock() {
+          lockHeld = true;
+        },
+        releaseLock() {
+          lockHeld = false;
+        },
+      }),
     },
     Utilities: {
       formatDate: () => "2026-09-29 12:00:00",
@@ -213,21 +168,29 @@ test("Apps Script appends one visitor row, rejects its replay, and preserves inv
       }).text
     );
 
-  const visitor = {
-    registrationType: "Visitor",
-    fullName: "Jordan Smith",
-    phone: "416-555-1234",
-    email: "jordan@example.com",
-    location: "North York",
-    age: "27",
-    gender: "Female",
-    jacketSize: "Small",
-    preferredContactMethod: "Email",
-    idempotencyKey: "sheet_test_key_001",
-  };
+  return { post, sheets, lockHeld: () => lockHeld };
+}
+
+const visitor = {
+  registrationType: "Visitor",
+  fullName: "Jordan Smith",
+  phone: "416-555-1234",
+  email: "jordan@example.com",
+  location: "North York",
+  age: "27",
+  gender: "Female",
+  jacketSize: "Small",
+  preferredContactMethod: "Email",
+  idempotencyKey: "sheet_test_key_001",
+};
+
+test("Apps Script accepts visitors after the date, rejects replay, and preserves inventory for members", () => {
+  const { post, sheets, lockHeld } = createAppsScriptHarness();
+  assert.equal(post("availability").closed, false);
 
   const visitorResult = post("registerVisitor", visitor);
   assert.equal(visitorResult.ok, true);
+  assert.equal(lockHeld(), false);
   assert.match(visitorResult.registrationId, /^WWS-2026-/);
   assert.equal(
     visitorResult.message,
@@ -261,4 +224,42 @@ test("Apps Script appends one visitor row, rejects its replay, and preserves inv
   );
   assert.equal(sheets.get("Registrations").rows.length, 3);
   assert.equal(post("availability", {}).sizes.find((item) => item.size === "Small").remaining, 45);
+});
+
+test("Apps Script works without a closing date and closes only after the last jacket is reserved", () => {
+  const { post, sheets, lockHeld } = createAppsScriptHarness({ closesAt: null });
+  post("availability");
+  for (const row of sheets.get("Inventory").rows.slice(1)) {
+    row[1] = row[0] === "XL" ? 1 : 0;
+  }
+  assert.equal(post("availability").closed, false);
+  const unavailable = post("registerVisitor", visitor);
+  assert.equal(unavailable.code, "SIZE_UNAVAILABLE");
+  assert.equal(lockHeld(), false);
+
+  assert.equal(post("registerVisitor", { ...visitor, jacketSize: "XL" }).ok, true);
+  const availability = post("availability");
+  assert.equal(availability.closed, true);
+  assert.equal(
+    availability.sizes.every((size) => !size.available),
+    true
+  );
+
+  const denied = post("registerVisitor", {
+    ...visitor,
+    jacketSize: "XL",
+    phone: "647-555-1234",
+    email: "second@example.com",
+    idempotencyKey: "last_jacket_second_key",
+  });
+  assert.equal(denied.code, "REGISTRATION_CLOSED");
+  assert.equal(lockHeld(), false);
+  assert.equal(sheets.get("Registrations").rows.length, 2);
+  assert.equal(
+    post("recordMember", {
+      registrationType: "Member",
+      idempotencyKey: "member_after_full_key",
+    }).code,
+    "REGISTRATION_CLOSED"
+  );
 });

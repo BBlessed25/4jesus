@@ -1,6 +1,6 @@
 import {
   DUPLICATE_REGISTRATION_MESSAGE,
-  isRegistrationClosed,
+  isInventoryFull,
   REGISTRATION_CLOSED_MESSAGE,
   validateMemberResponse,
   validateVisitorRegistration,
@@ -34,8 +34,7 @@ export function sanitizeSpreadsheetValue(value) {
 export function createInMemoryRegistrationStore({
   limits = JACKET_LIMITS,
   registrations = [],
-  closesAt = "2026-10-02T23:59:59-04:00",
-  now = () => new Date("2026-09-29T12:00:00-04:00"),
+  now = () => new Date(),
 } = {}) {
   const saved = [...registrations];
   let queue = Promise.resolve();
@@ -66,7 +65,7 @@ export function createInMemoryRegistrationStore({
     availability() {
       return {
         ok: true,
-        closed: isRegistrationClosed(closesAt, now()),
+        closed: isInventoryFull(inventoryFromRegistrations(saved, limits)),
         inventory: inventoryFromRegistrations(saved, limits),
       };
     },
@@ -75,7 +74,7 @@ export function createInMemoryRegistrationStore({
     },
     recordMember(form) {
       return withLock(async () => {
-        if (isRegistrationClosed(closesAt, now())) return closedResponse();
+        if (isInventoryFull(inventoryFromRegistrations(saved, limits))) return closedResponse();
         const { errors, value } = validateMemberResponse(form);
         if (Object.keys(errors).length) return { ok: false, code: "VALIDATION_ERROR", errors };
         if (saved.some((item) => item.idempotencyKey === value.idempotencyKey)) {
@@ -94,7 +93,7 @@ export function createInMemoryRegistrationStore({
     },
     submitVisitor(form) {
       return withLock(async () => {
-        if (isRegistrationClosed(closesAt, now())) return closedResponse();
+        if (isInventoryFull(inventoryFromRegistrations(saved, limits))) return closedResponse();
 
         const { errors, value } = validateVisitorRegistration(form);
         if (Object.keys(errors).length) return { ok: false, code: "VALIDATION_ERROR", errors };

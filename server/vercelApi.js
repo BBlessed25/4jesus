@@ -1,5 +1,3 @@
-import { isRegistrationClosed } from "../src/lib/registration.js";
-
 /** @typedef {Error & { code?: string, missing?: { appsScriptUrl: boolean, sharedSecret: boolean } }} CodedError */
 
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
@@ -155,17 +153,10 @@ export function getServerConfig() {
   const config = {
     appsScriptUrl: String(appsScriptUrl).trim(),
     sharedSecret: String(sharedSecret).trim(),
-    closesAt: String(process.env.REGISTRATION_CLOSES_AT || "").trim(),
     timezone: String(process.env.APP_TIMEZONE || "").trim(),
     allowedOrigin: String(process.env.ALLOWED_ORIGIN || "").trim(),
   };
-  if (
-    !config.appsScriptUrl ||
-    !config.sharedSecret ||
-    !config.closesAt ||
-    !config.timezone ||
-    !config.allowedOrigin
-  ) {
+  if (!config.appsScriptUrl || !config.sharedSecret || !config.timezone || !config.allowedOrigin) {
     const error = /** @type {CodedError} */ (
       new Error("Registration service configuration is incomplete.")
     );
@@ -174,11 +165,6 @@ export function getServerConfig() {
   }
   if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(config.appsScriptUrl)) {
     const error = /** @type {CodedError} */ (new Error("Registration backend URL is invalid."));
-    error.code = "CONFIGURATION_ERROR";
-    throw error;
-  }
-  if (!Number.isFinite(new Date(config.closesAt).getTime())) {
-    const error = /** @type {CodedError} */ (new Error("Registration closing time is invalid."));
     error.code = "CONFIGURATION_ERROR";
     throw error;
   }
@@ -289,10 +275,6 @@ export function backendStatus(code) {
       GOOGLE_BACKEND_UNAVAILABLE: 503,
     }[code] || 502
   );
-}
-
-export function registrationClosed(config = getServerConfig(), now = new Date()) {
-  return isRegistrationClosed(config.closesAt, now);
 }
 
 export function handleEndpointError(response, error) {

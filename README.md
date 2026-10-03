@@ -22,7 +22,7 @@ npx vercel dev
 
 ### Jacket availability troubleshooting
 
-If the form says live jacket availability cannot be loaded, confirm that you started the full stack with `npx vercel dev` or deployed it to Vercel. Configure the five server-only variables shown below. The form allows users to choose a size during a temporary lookup outage, but a working backend is still required to validate and save the final submission.
+If the form says live jacket availability cannot be loaded, confirm that you started the full stack with `npx vercel dev` or deployed it to Vercel. Configure the four server-only variables shown below. The form allows users to choose a size during a temporary lookup outage, but a working backend is still required to validate and save the final submission.
 
 ## Google Sheets and Apps Script setup
 
@@ -30,7 +30,6 @@ If the form says live jacket availability cannot be loaded, confirm that you sta
 2. Open **Extensions → Apps Script**, rename the Apps Script project exactly `Church_Project`, set its timezone to `America/Toronto`, and replace the editor contents with `google-apps-script/Code.gs`.
 3. In **Project Settings → Script Properties**, add:
    - `CHURCH_PROJECT_SHARED_SECRET`: the same long random value used in Vercel. Do not use `Church_Project` as the value; generate a separate long random password.
-   - `REGISTRATION_CLOSES_AT`: `2026-10-02T23:59:59-04:00` (recommended as a server-side override).
    - `SPREADSHEET_ID`: only needed if the script is not bound to the spreadsheet.
 4. Select **Deploy → New deployment → Web app**.
 5. Use `Church_Project` as the deployment description/service identifier, set **Execute as** to the owner and **Who has access** to **Anyone**, then deploy.
@@ -43,6 +42,8 @@ The first authenticated request creates these worksheets when they do not alread
 
 Confirmed visitor rows are the inventory source of truth. Member rows use `recorded` status and never reduce stock. Apps Script holds `LockService.getScriptLock()` while validating duplicates, checking stock, and appending a visitor row.
 
+The page displays Saturday, October 3, 2026 as the registration deadline, but registrations remain open while any jacket size is available. Registration closes when all sizes are fully reserved. Existing `REGISTRATION_CLOSES_AT` environment variables and Script Properties are ignored.
+
 ## Vercel configuration
 
 Import the repository into Vercel and add these variables for Production, Preview, and Development as appropriate:
@@ -50,7 +51,6 @@ Import the repository into Vercel and add these variables for Production, Previe
 ```dotenv
 GOOGLE_APPS_SCRIPT_URL=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
 CHURCH_PROJECT_SHARED_SECRET=replace-with-a-long-random-secret
-REGISTRATION_CLOSES_AT=2026-10-02T23:59:59-04:00
 APP_TIMEZONE=America/Toronto
 ALLOWED_ORIGIN=https://your-domain.example
 ```
