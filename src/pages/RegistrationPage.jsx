@@ -81,7 +81,7 @@ export function RegistrationPage() {
               <p>
                 <strong>Time:</strong> 10:00 AM (EST)
               </p>
-              <p className="italic">Registration closes Friday, October 2, 2026.</p>
+              <p className="italic">Registration closes Saturday, October 3, 2026.</p>
             </div>
           </div>
         </section>
